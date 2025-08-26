@@ -1,0 +1,30 @@
+server:
+  port: 8184
+
+logging:
+  level:
+    com.food.ordering.system: DEBUG
+    org.flywaydb: DEBUG
+
+spring:
+  jpa:
+    open-in-view: false
+    show-sql: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+  datasource:
+    url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:postgres}?currentSchema=customer&binaryTransfer=true&reWriteBatchedInserts=true&stringtype=unspecified
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  ##Flyway
+  flyway:
+    enabled: true
+    locations: classpath:db
+    baseline-on-migrate: true
+    schemas: customer
+    default-schema: customer
+    create-schemas: true

@@ -1,0 +1,15 @@
+meta {
+  name: Get Order by Tracking ID (Example)
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://localhost:8181/orders/85579243-1939-4057-ae99-8313dc121cd1
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

@@ -1,0 +1,9 @@
+rootProject.name = 'food-ordering-systemv2'
+
+include 'common-libraries'
+include 'kafka-infrastructure'
+include 'order-services'
+include 'customer-services'
+include 'payment-services'
+include 'restaurant-services'
+include 'api-gateway'
