@@ -4,6 +4,16 @@ plugins {
     id 'io.spring.dependency-management'
 }
 
+ext {
+    set('springCloudVersion', "2023.0.0")
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
 dependencies {
     implementation project(':common-libraries')
     
