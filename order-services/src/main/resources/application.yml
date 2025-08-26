@@ -21,34 +21,33 @@ spring:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         default_schema: orden
         hbm2ddl:
-          auto: validate
+          auto: create-drop
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:postgres}?currentSchema=orden&binaryTransfer=true&reWriteBatchedInserts=true&stringtype=unspecified
     username: ${POSTGRES_USER:postgres}
     password: ${POSTGRES_PASSWORD:admin}
     driver-class-name: org.postgresql.Driver
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092,localhost:29092,localhost:39092}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092}
     topic:
       payment-request: payment-request
       payment-response: payment-response
       restaurant-approval-request: restaurant-approval-request
       restaurant-approval-response: restaurant-approval-response
     consumer:
-      group-id: order-service-consumer
-      auto-offset-reset: latest
+      group-id: order-consumer-group
+      auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
-      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
-      properties:
-        spring.json.trusted.packages: "*"
-        spring.json.use.type.headers: false
-        spring.kafka.consumer.auto-offset-reset: latest
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
 
 
   ##Flyway
   flyway:
     enabled: true
-    locations: classpath:db
+    locations: classpath:bd
     baseline-on-migrate: true
     schemas: orden
     default-schema: orden
@@ -56,7 +55,7 @@ spring:
 
 
 kafka-config:
-  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:19092,localhost:29092,localhost:39092}
+  bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092}
   schema-registry-url-key: schema.registry.url
   schema-registry-url: http://${POSTGRES_HOST:localhost}:8081
   num-of-partitions: 3
@@ -74,5 +73,6 @@ kafka-producer-config:
   retry-count: 5
 
 kafka-consumer-config:
-  payment-consumer-group-id: payment-topic-consumer
-  restaurant-approval-consumer-group-id: restaurant-approval-topic-consumer
+  restaurant-approval-consumer-group-id: restaurant-approval-consumer-group
+  payment-consumer-group-id: payment-consumer-group
+  order-consumer-group-id: order-consumer-group

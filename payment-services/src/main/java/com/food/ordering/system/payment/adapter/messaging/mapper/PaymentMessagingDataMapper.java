@@ -1,5 +1,6 @@
 package com.food.ordering.system.payment.service.adapter.messaging.mapper;
 
+import com.food.ordering.system.common.domain.valueobject.PaymentOrderStatus;
 import com.food.ordering.system.kafka.stream.model.PaymentRequestModel;
 import com.food.ordering.system.kafka.stream.model.PaymentResponseModel;
 import com.food.ordering.system.payment.service.application.dto.PaymentRequest;
@@ -8,8 +9,7 @@ import com.food.ordering.system.payment.service.domain.model.events.PaymentCompl
 import com.food.ordering.system.payment.service.domain.model.events.PaymentFailedEvent;
 import org.springframework.stereotype.Component;
 
-import java.time.ZonedDateTime;
-import java.util.List;
+import java.util.UUID;
 
 @Component
 public class PaymentMessagingDataMapper {
@@ -22,48 +22,48 @@ public class PaymentMessagingDataMapper {
                 .orderId(paymentRequestModel.getOrderId())
                 .price(paymentRequestModel.getPrice())
                 .createdAt(paymentRequestModel.getCreatedAt())
-                .paymentOrderStatus(paymentRequestModel.getPaymentOrderStatus())
+                .paymentOrderStatus(PaymentOrderStatus.valueOf(paymentRequestModel.getPaymentOrderStatus().name()))
                 .build();
     }
 
     public PaymentResponseModel paymentCompletedEventToPaymentResponseModel(PaymentCompletedEvent paymentCompletedEvent) {
         return PaymentResponseModel.builder()
-                .id(paymentCompletedEvent.getPayment().getId().getValue().toString())
-                .sagaId(paymentCompletedEvent.getPayment().getId().getValue().toString())
-                .paymentId(paymentCompletedEvent.getPayment().getId().getValue().toString())
-                .customerId(paymentCompletedEvent.getPayment().getCustomerId().getValue().toString())
-                .orderId(paymentCompletedEvent.getPayment().getOrderId().getValue().toString())
+                .id(UUID.randomUUID())
+                .sagaId(UUID.randomUUID())
+                .paymentId(paymentCompletedEvent.getPayment().getId().getValue())
+                .customerId(paymentCompletedEvent.getPayment().getCustomerId().getValue())
+                .orderId(paymentCompletedEvent.getPayment().getOrderId().getValue())
                 .price(paymentCompletedEvent.getPayment().getPrice().getAmount())
-                .createdAt(paymentCompletedEvent.getCreatedAt())
-                .paymentStatus(paymentCompletedEvent.getPayment().getPaymentStatus())
+                .createdAt(paymentCompletedEvent.getCreatedAt().toInstant())
+                .paymentStatus(PaymentResponseModel.PaymentStatus.valueOf(paymentCompletedEvent.getPayment().getPaymentStatus().name()))
                 .failureMessages(paymentCompletedEvent.getFailureMessages())
                 .build();
     }
 
     public PaymentResponseModel paymentCancelledEventToPaymentResponseModel(PaymentCancelledEvent paymentCancelledEvent) {
         return PaymentResponseModel.builder()
-                .id(paymentCancelledEvent.getPayment().getId().getValue().toString())
-                .sagaId(paymentCancelledEvent.getPayment().getId().getValue().toString())
-                .paymentId(paymentCancelledEvent.getPayment().getId().getValue().toString())
-                .customerId(paymentCancelledEvent.getPayment().getCustomerId().getValue().toString())
-                .orderId(paymentCancelledEvent.getPayment().getOrderId().getValue().toString())
+                .id(UUID.randomUUID())
+                .sagaId(UUID.randomUUID())
+                .paymentId(paymentCancelledEvent.getPayment().getId().getValue())
+                .customerId(paymentCancelledEvent.getPayment().getCustomerId().getValue())
+                .orderId(paymentCancelledEvent.getPayment().getOrderId().getValue())
                 .price(paymentCancelledEvent.getPayment().getPrice().getAmount())
-                .createdAt(paymentCancelledEvent.getCreatedAt())
-                .paymentStatus(paymentCancelledEvent.getPayment().getPaymentStatus())
+                .createdAt(paymentCancelledEvent.getCreatedAt().toInstant())
+                .paymentStatus(PaymentResponseModel.PaymentStatus.valueOf(paymentCancelledEvent.getPayment().getPaymentStatus().name()))
                 .failureMessages(paymentCancelledEvent.getFailureMessages())
                 .build();
     }
 
     public PaymentResponseModel paymentFailedEventToPaymentResponseModel(PaymentFailedEvent paymentFailedEvent) {
         return PaymentResponseModel.builder()
-                .id(paymentFailedEvent.getPayment().getId().getValue().toString())
-                .sagaId(paymentFailedEvent.getPayment().getId().getValue().toString())
-                .paymentId(paymentFailedEvent.getPayment().getId().getValue().toString())
-                .customerId(paymentFailedEvent.getPayment().getCustomerId().getValue().toString())
-                .orderId(paymentFailedEvent.getPayment().getOrderId().getValue().toString())
+                .id(UUID.randomUUID())
+                .sagaId(UUID.randomUUID())
+                .paymentId(paymentFailedEvent.getPayment().getId().getValue())
+                .customerId(paymentFailedEvent.getPayment().getCustomerId().getValue())
+                .orderId(paymentFailedEvent.getPayment().getOrderId().getValue())
                 .price(paymentFailedEvent.getPayment().getPrice().getAmount())
-                .createdAt(paymentFailedEvent.getCreatedAt())
-                .paymentStatus(paymentFailedEvent.getPayment().getPaymentStatus())
+                .createdAt(paymentFailedEvent.getCreatedAt().toInstant())
+                .paymentStatus(PaymentResponseModel.PaymentStatus.valueOf(paymentFailedEvent.getPayment().getPaymentStatus().name()))
                 .failureMessages(paymentFailedEvent.getFailureMessages())
                 .build();
     }

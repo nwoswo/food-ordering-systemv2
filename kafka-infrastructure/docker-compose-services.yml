@@ -5,12 +5,15 @@ services:
     ports:
       - "${ORDER_SERVICE_PORT}:8181"
     environment:
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres-db}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092}
+      - KAFKA_CONSUMER_CONFIG_RESTAURANT_APPROVAL_CONSUMER_GROUP_ID=restaurant-approval-consumer-group
+      - KAFKA_CONSUMER_CONFIG_PAYMENT_CONSUMER_GROUP_ID=payment-consumer-group
+      - KAFKA_CONSUMER_CONFIG_ORDER_CONSUMER_GROUP_ID=order-consumer-group
     networks:
       - kafka-network
     depends_on:
@@ -22,14 +25,14 @@ services:
     image: payment-service:latest
     container_name: payment-service
     ports:
-      - "${PAYMENT_SERVICE_PORT}:8182"
+      - "${PAYMENT_SERVICE_PORT:-8182}:8182"
     environment:
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres-db}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092}
     networks:
       - kafka-network
     depends_on:
@@ -39,14 +42,17 @@ services:
     image: restaurant-service:latest
     container_name: restaurant-service
     ports:
-      - "${RESTAURANT_SERVICE_PORT}:8183"
+      - "${RESTAURANT_SERVICE_PORT:-8183}:8183"
     environment:
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres-db}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092}
+      - KAFKA_CONSUMER_CONFIG_RESTAURANT_APPROVAL_CONSUMER_GROUP_ID=restaurant-approval-consumer-group
+      - KAFKA_CONSUMER_CONFIG_PAYMENT_CONSUMER_GROUP_ID=payment-consumer-group
+      - KAFKA_CONSUMER_CONFIG_ORDER_CONSUMER_GROUP_ID=order-consumer-group
     networks:
       - kafka-network
     depends_on:
@@ -56,14 +62,14 @@ services:
     image: customer-service:latest
     container_name: customer-service
     ports:
-      - "${CUSTOMER_SERVICE_PORT}:8184"
+      - "${CUSTOMER_SERVICE_PORT:-8184}:8184"
     environment:
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres-db}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092}
     networks:
       - kafka-network
 
@@ -71,14 +77,14 @@ services:
     image: api-gateway:latest
     container_name: api-gateway
     ports:
-      - "${API_GATEWAY_PORT}:8080"
+      - "${API_GATEWAY_PORT:-8080}:8080"
     environment:
-      - POSTGRES_HOST=${POSTGRES_HOST}
-      - POSTGRES_PORT=${POSTGRES_PORT}
-      - POSTGRES_DB=${POSTGRES_DB}
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - POSTGRES_HOST=${POSTGRES_HOST:-postgres-db}
+      - POSTGRES_PORT=${POSTGRES_PORT:-5432}
+      - POSTGRES_DB=${POSTGRES_DB:-postgres}
+      - POSTGRES_USER=${POSTGRES_USER:-postgres}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-admin}
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092}
     networks:
       - kafka-network
     depends_on:
@@ -90,4 +96,4 @@ services:
 networks:
   kafka-network:
     external: true
-    name: kafka_kafka-network
+    name: kafka-infrastructure_kafka-network

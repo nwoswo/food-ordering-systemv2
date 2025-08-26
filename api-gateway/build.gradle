@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
+    id 'com.palantir.docker'
 }
 
 ext {
@@ -35,4 +36,11 @@ dependencies {
 bootJar {
     archiveBaseName = 'api-gateway'
     archiveVersion = '1.0.0'
+}
+
+docker {
+    name "api-gateway:latest"
+    dockerfile file('Dockerfile')
+    files bootJar.archiveFile
+    buildArgs([JAR_FILE: bootJar.archiveFileName.get()])
 }

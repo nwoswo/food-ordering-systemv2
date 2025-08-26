@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
+    id 'com.palantir.docker'
 }
 
 ext {
@@ -42,4 +43,13 @@ dependencies {
 bootJar {
     archiveBaseName = 'order-service'
     archiveVersion = '1.0.0'
+    mainClass = 'com.food.ordering.system.order.service.domain.OrderServiceApplication'
+}
+
+docker {
+    name "order-service:latest"
+    dockerfile file('Dockerfile')
+    files bootJar.archiveFile
+    buildArgs([JAR_FILE: bootJar.archiveFileName.get()])
+    copySpec.into('build/libs')
 }

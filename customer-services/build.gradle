@@ -2,6 +2,7 @@ plugins {
     id 'java'
     id 'org.springframework.boot'
     id 'io.spring.dependency-management'
+    id 'com.palantir.docker'
 }
 
 ext {
@@ -24,6 +25,7 @@ dependencies {
     implementation 'org.springframework.kafka:spring-kafka'
     implementation 'org.flywaydb:flyway-core'
     implementation 'com.h2database:h2'
+    implementation 'org.postgresql:postgresql'
     implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0'
     implementation 'org.mapstruct:mapstruct:1.5.5.Final'
     
@@ -38,4 +40,11 @@ dependencies {
 bootJar {
     archiveBaseName = 'customer-service'
     archiveVersion = '1.0.0'
+}
+
+docker {
+    name "customer-service:latest"
+    dockerfile file('Dockerfile')
+    files bootJar.archiveFile
+    buildArgs([JAR_FILE: bootJar.archiveFileName.get()])
 }

@@ -1,6 +1,6 @@
 package com.food.ordering.system.order.service.domain.event;
 
-import com.food.ordering.system.domain.event.publisher.DomainEventPublisher;
+import com.food.ordering.system.common.domain.event.publisher.DomainEventPublisher;
 import com.food.ordering.system.order.service.domain.entity.Order;
 
 import java.time.ZonedDateTime;

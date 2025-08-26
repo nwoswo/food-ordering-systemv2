@@ -8,6 +8,7 @@ import com.food.ordering.system.payment.service.domain.model.entities.Payment;
 import com.food.ordering.system.payment.service.domain.model.events.PaymentEvent;
 import com.food.ordering.system.payment.service.application.exception.PaymentApplicationServiceException;
 import com.food.ordering.system.payment.service.application.mapper.PaymentDataMapper;
+import com.food.ordering.system.payment.service.domain.service.PaymentDomainService;
 import com.food.ordering.system.payment.service.application.ports.out.PaymentCancelledMessagePublisher;
 import com.food.ordering.system.payment.service.application.ports.out.PaymentCompletedMessagePublisher;
 import com.food.ordering.system.payment.service.application.ports.out.PaymentFailedMessagePublisher;
@@ -92,13 +93,14 @@ public class PaymentRequestHelper {
     }
 
     private List<CreditHistory> getCreditHistory(CustomerId customerId) {
-        Optional<List<CreditHistory>> creditHistories = creditHistoryRepository.findByCustomerId(customerId);
-        if (creditHistories.isEmpty()) {
+        List<CreditHistory> creditHistories = creditHistoryRepository.findByCustomerId(customerId);
+        if (creditHistories == null || creditHistories.isEmpty()) {
             log.warn("Could not find credit history for customer: {}", customerId.getValue());
             throw new PaymentApplicationServiceException("Could not find credit history for customer: " +
                     customerId.getValue());
         }
-        return creditHistories.get();
+        // Create a mutable copy to avoid UnsupportedOperationException when modifying the list
+        return new ArrayList<>(creditHistories);
     }
 
     private void persistDbObjects(Payment payment,
