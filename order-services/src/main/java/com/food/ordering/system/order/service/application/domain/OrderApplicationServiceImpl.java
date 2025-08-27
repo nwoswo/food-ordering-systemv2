@@ -1,4 +1,4 @@
-package com.food.ordering.system.order.service.domain;
+package com.food.ordering.system.order.service.application.domain;
 
 import com.food.ordering.system.order.service.domain.dto.create.CreateOrderCommand;
 import com.food.ordering.system.order.service.domain.dto.create.CreateOrderResponse;
@@ -12,7 +12,7 @@ import org.springframework.validation.annotation.Validated;
 @Slf4j
 @Validated
 @Service
-class OrderApplicationServiceImpl implements OrderApplicationService {
+public class OrderApplicationServiceImpl implements OrderApplicationService {
 
     private final OrderCreateCommandHandler orderCreateCommandHandler;
 

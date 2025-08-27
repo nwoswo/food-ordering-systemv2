@@ -8,12 +8,8 @@ logging:
 
 spring:
   jpa:
-    open-in-view: false
-    show-sql: false
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
   datasource:
     url: jdbc:postgresql://${POSTGRES_HOST:localhost}:${POSTGRES_PORT:5432}/${POSTGRES_DB:postgres}?currentSchema=customer&binaryTransfer=true&reWriteBatchedInserts=true&stringtype=unspecified
     username: ${POSTGRES_USER:postgres}

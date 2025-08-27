@@ -1,4 +1,4 @@
-package com.food.ordering.system.order.service.domain;
+package com.food.ordering.system.order.service.application.domain;
 
 import java.util.Optional;
 import java.util.UUID;
@@ -17,7 +17,9 @@ import com.food.ordering.system.order.service.domain.mapper.OrderDataMapper;
 import com.food.ordering.system.order.service.domain.ports.output.repository.CustomerRepository;
 import com.food.ordering.system.order.service.domain.ports.output.repository.OrderRepository;
 import com.food.ordering.system.order.service.domain.ports.output.repository.RestaurantRepository;
+import com.food.ordering.system.order.service.domain.ports.output.message.publisher.payment.OrderCreatedPaymentRequestMessagePublisher;
 import com.food.ordering.system.order.service.infrastructure.order.adapter.OutboxService;
+import com.food.ordering.system.order.service.domain.OrderDomainService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -36,19 +38,22 @@ public class OrderCreateHelper {
     private final OrderDataMapper orderDataMapper;
 
     private final OutboxService outboxService;
+    private final OrderCreatedPaymentRequestMessagePublisher orderCreatedPaymentRequestMessagePublisher;
 
     public OrderCreateHelper(OrderDomainService orderDomainService,
             OrderRepository orderRepository,
             CustomerRepository customerRepository,
             RestaurantRepository restaurantRepository,
             OrderDataMapper orderDataMapper,
-            OutboxService outboxService) {
+            OutboxService outboxService,
+            OrderCreatedPaymentRequestMessagePublisher orderCreatedPaymentRequestMessagePublisher) {
         this.orderDomainService = orderDomainService;
         this.orderRepository = orderRepository;
         this.customerRepository = customerRepository;
         this.restaurantRepository = restaurantRepository;
         this.orderDataMapper = orderDataMapper;
         this.outboxService = outboxService;
+        this.orderCreatedPaymentRequestMessagePublisher = orderCreatedPaymentRequestMessagePublisher;
     }
 
     @Transactional
@@ -60,7 +65,7 @@ public class OrderCreateHelper {
         // Update order items with actual product prices from restaurant
         updateOrderItemsWithProductPrices(order, restaurant);
         
-        OrderCreatedEvent orderCreatedEvent = orderDomainService.validateAndInitiateOrder(order, restaurant);
+        OrderCreatedEvent orderCreatedEvent = orderDomainService.validateAndInitiateOrder(order, restaurant, orderCreatedPaymentRequestMessagePublisher);
         saveOrder(order);
         
         // Save event to outbox for reliable messaging

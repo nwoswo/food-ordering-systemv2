@@ -1,7 +1,11 @@
-package com.food.ordering.system.order.service.domain;
+package com.food.ordering.system.order.service;
 
 import com.food.ordering.system.order.service.domain.ports.input.service.OrderApplicationService;
-import com.food.ordering.system.order.service.domain.OrderApplicationServiceImpl;
+import com.food.ordering.system.order.service.application.domain.OrderApplicationServiceImpl;
+import com.food.ordering.system.order.service.application.domain.OrderCreateCommandHandler;
+import com.food.ordering.system.order.service.application.domain.OrderTrackCommandHandler;
+import com.food.ordering.system.order.service.domain.OrderDomainService;
+import com.food.ordering.system.order.service.domain.OrderDomainServiceImpl;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 

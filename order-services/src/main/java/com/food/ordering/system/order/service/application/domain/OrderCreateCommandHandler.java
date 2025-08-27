@@ -1,4 +1,4 @@
-package com.food.ordering.system.order.service.domain;
+package com.food.ordering.system.order.service.application.domain;
 
 import com.food.ordering.system.order.service.domain.dto.create.CreateOrderCommand;
 import com.food.ordering.system.order.service.domain.dto.create.CreateOrderResponse;

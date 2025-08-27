@@ -1,6 +1,6 @@
 CREATE SCHEMA IF NOT EXISTS customer;
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
 
 CREATE TABLE customer.customers
 (

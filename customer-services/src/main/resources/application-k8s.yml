@@ -8,12 +8,8 @@ logging:
 
 spring:
   jpa:
-    open-in-view: false
-    show-sql: false
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
-    properties:
-      hibernate:
-        dialect: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: none
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres-service:5432/postgres?currentSchema=customer&binaryTransfer=true&reWriteBatchedInserts=true&stringtype=unspecified}
     username: ${SPRING_DATASOURCE_USERNAME:postgres}

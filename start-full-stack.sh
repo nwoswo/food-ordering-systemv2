@@ -1,5 +1,17 @@
 #!/bin/bash
 
+# Helper function to wait for a service to be available by polling its health endpoint
+wait_for_service() {
+    local name=$1
+    local url=$2
+    echo -n "⏳ Esperando a que el servicio '$name' esté disponible en $url..."
+    until curl -s -f -o /dev/null "$url"; do
+        echo -n "."
+        sleep 5
+    done
+    echo " ✅ ¡Listo!"
+}
+
 echo "🚀 Iniciando el stack completo de Food Ordering System..."
 echo ""
 
@@ -21,17 +33,19 @@ echo "📦 Iniciando infraestructura (Kafka + PostgreSQL + Kafka Connect)..."
 cd kafka-infrastructure
 docker compose up -d
 
-echo ""
-echo "⏳ Esperando a que Kafka, PostgreSQL y Kafka Connect estén listos..."
-sleep 45
+# Esperar a que los componentes clave de la infraestructura estén listos
+wait_for_service "Kafka Connect" "http://localhost:8083"
 
 echo ""
 echo "🚀 Iniciando servicios de aplicación..."
 docker compose -f docker-compose-services.yml up -d
 
-echo ""
-echo "⏳ Esperando a que los servicios estén listos..."
-sleep 20
+# Esperar a que los servicios de la aplicación estén listos (asumiendo que exponen /actuator/health)
+wait_for_service "Order Service" "http://localhost:8181/actuator/health"
+wait_for_service "Payment Service" "http://localhost:8182/actuator/health"
+wait_for_service "Restaurant Service" "http://localhost:8183/actuator/health"
+wait_for_service "Customer Service" "http://localhost:8184/actuator/health"
+wait_for_service "API Gateway" "http://localhost:8080/actuator/health"
 
 echo ""
 echo "🔧 Configurando Debezium Outbox Pattern..."

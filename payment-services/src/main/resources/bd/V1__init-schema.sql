@@ -1,7 +1,7 @@
 
 CREATE SCHEMA IF NOT EXISTS "payment";
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
 
 DROP TYPE IF EXISTS payment_status;
 

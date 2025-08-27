@@ -1,6 +1,6 @@
 CREATE SCHEMA IF NOT EXISTS "orden";
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
 
 DROP TYPE IF EXISTS order_status;
 CREATE TYPE order_status AS ENUM ('PENDING', 'PAID', 'APPROVED', 'CANCELLED', 'CANCELLING');
@@ -67,11 +67,16 @@ CREATE INDEX "IDX_ORDER_RESTAURANT_ID" ON "orden".orden USING btree
     TABLESPACE pg_default;
 
 -- Outbox Pattern Table
+
+
+
 DROP TABLE IF EXISTS "orden".outbox_events CASCADE;
 
-CREATE TABLE "orden".outbox_events
+
+-- Create the outbox_events table
+CREATE TABLE orden.outbox_events
 (
-    id uuid NOT NULL DEFAULT uuid_generate_v4(),
+    id uuid NOT NULL DEFAULT public.uuid_generate_v4(),
     aggregate_id uuid NOT NULL,
     aggregate_type character varying(255) NOT NULL,
     event_type character varying(255) NOT NULL,
@@ -80,6 +85,8 @@ CREATE TABLE "orden".outbox_events
     processed boolean NOT NULL DEFAULT false,
     CONSTRAINT outbox_events_pkey PRIMARY KEY (id)
 );
+
+
 
 CREATE INDEX "IDX_OUTBOX_AGGREGATE_ID" ON "orden".outbox_events USING btree
     (aggregate_id ASC NULLS LAST)
