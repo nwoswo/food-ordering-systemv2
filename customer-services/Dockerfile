@@ -9,3 +9,4 @@ EXPOSE 8184
 ENTRYPOINT ["java", "-jar", "app.jar"]
 
 
+

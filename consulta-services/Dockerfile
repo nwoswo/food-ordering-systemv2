@@ -1,11 +1,6 @@
 FROM amazoncorretto:17.0.16
-
 WORKDIR /app
-
-COPY build/libs/order-service-1.0.0.jar app.jar
-
-EXPOSE 8181
-
+ARG JAR_FILE
+COPY build/libs/${JAR_FILE} app.jar
+EXPOSE 8185
 ENTRYPOINT ["java", "-jar", "app.jar"]
-
-

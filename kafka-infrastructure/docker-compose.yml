@@ -183,6 +183,9 @@ services:
     environment:
       KAFKA_LOG4J_ROOT_LOGLEVEL: "INFO"
       KAFKA_LOG4J_LOGGERS: "org.apache.kafka.clients.NetworkClient=WARN,kafka.producer.async.DefaultEventHandler=DEBUG,state.change.logger=INFO"
+      # LOG_DIR: /tmp
+    volumes:
+      - ./log4j.properties:/etc/kafka/log4j.properties
     networks:
       - kafka-network
     command: >
