@@ -17,13 +17,13 @@ if ! docker images | grep -q "api-gateway"; then
 fi
 
 echo ""
-echo "📦 Iniciando infraestructura (Kafka + PostgreSQL)..."
+echo "📦 Iniciando infraestructura (Kafka + PostgreSQL + Kafka Connect)..."
 cd kafka-infrastructure
 docker compose up -d
 
 echo ""
-echo "⏳ Esperando a que Kafka y PostgreSQL estén listos..."
-sleep 30
+echo "⏳ Esperando a que Kafka, PostgreSQL y Kafka Connect estén listos..."
+sleep 45
 
 echo ""
 echo "🚀 Iniciando servicios de aplicación..."
@@ -32,6 +32,10 @@ docker compose -f docker-compose-services.yml up -d
 echo ""
 echo "⏳ Esperando a que los servicios estén listos..."
 sleep 20
+
+echo ""
+echo "🔧 Configurando Debezium Outbox Pattern..."
+./setup-debezium-outbox.sh
 
 echo ""
 echo "✅ Stack completo iniciado!"
@@ -43,6 +47,7 @@ echo "   - Payment Service: http://localhost:8182"
 echo "   - Restaurant Service: http://localhost:8183"
 echo "   - Customer Service: http://localhost:8184"
 echo "   - Kafka UI: http://localhost:8090"
+echo "   - Kafka Connect: http://localhost:8083"
 echo "   - PostgreSQL: localhost:5432"
 echo ""
 echo "📋 Comandos útiles:"

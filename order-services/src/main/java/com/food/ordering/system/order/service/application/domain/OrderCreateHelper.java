@@ -13,10 +13,11 @@ import com.food.ordering.system.order.service.domain.entity.Restaurant;
 import com.food.ordering.system.order.service.domain.event.OrderCreatedEvent;
 import com.food.ordering.system.order.service.domain.exception.OrderDomainException;
 import com.food.ordering.system.order.service.domain.mapper.OrderDataMapper;
-import com.food.ordering.system.order.service.domain.ports.output.message.publisher.payment.OrderCreatedPaymentRequestMessagePublisher;
+
 import com.food.ordering.system.order.service.domain.ports.output.repository.CustomerRepository;
 import com.food.ordering.system.order.service.domain.ports.output.repository.OrderRepository;
 import com.food.ordering.system.order.service.domain.ports.output.repository.RestaurantRepository;
+import com.food.ordering.system.order.service.infrastructure.order.adapter.OutboxService;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -34,20 +35,20 @@ public class OrderCreateHelper {
 
     private final OrderDataMapper orderDataMapper;
 
-    private final OrderCreatedPaymentRequestMessagePublisher orderCreatedEventDomainEventPublisher;
+    private final OutboxService outboxService;
 
     public OrderCreateHelper(OrderDomainService orderDomainService,
             OrderRepository orderRepository,
             CustomerRepository customerRepository,
             RestaurantRepository restaurantRepository,
             OrderDataMapper orderDataMapper,
-            OrderCreatedPaymentRequestMessagePublisher orderCreatedEventDomainEventPublisher) {
+            OutboxService outboxService) {
         this.orderDomainService = orderDomainService;
         this.orderRepository = orderRepository;
         this.customerRepository = customerRepository;
         this.restaurantRepository = restaurantRepository;
         this.orderDataMapper = orderDataMapper;
-        this.orderCreatedEventDomainEventPublisher = orderCreatedEventDomainEventPublisher;
+        this.outboxService = outboxService;
     }
 
     @Transactional
@@ -59,9 +60,12 @@ public class OrderCreateHelper {
         // Update order items with actual product prices from restaurant
         updateOrderItemsWithProductPrices(order, restaurant);
         
-        OrderCreatedEvent orderCreatedEvent = orderDomainService.validateAndInitiateOrder(order, restaurant,
-                orderCreatedEventDomainEventPublisher);
+        OrderCreatedEvent orderCreatedEvent = orderDomainService.validateAndInitiateOrder(order, restaurant);
         saveOrder(order);
+        
+        // Save event to outbox for reliable messaging
+        saveEventToOutbox(orderCreatedEvent);
+        
         log.info("Order is created with id: {}", orderCreatedEvent.getOrder().getId().getValue());
         return orderCreatedEvent;
     }
@@ -117,5 +121,35 @@ public class OrderCreateHelper {
                     });
         });
         System.out.println("DEBUG: === updateOrderItemsWithProductPrices completed ===");
+    }
+    
+    private void saveEventToOutbox(OrderCreatedEvent orderCreatedEvent) {
+        log.info("=== DEBUG: saveEventToOutbox called ===");
+        try {
+            // Convert event to JSON for outbox storage
+            String eventData = String.format(
+                "{\"orderId\":\"%s\",\"customerId\":\"%s\",\"restaurantId\":\"%s\",\"price\":%s,\"orderStatus\":\"%s\"}",
+                orderCreatedEvent.getOrder().getId().getValue(),
+                orderCreatedEvent.getOrder().getCustomerId().getValue(),
+                orderCreatedEvent.getOrder().getRestaurantId().getValue(),
+                orderCreatedEvent.getOrder().getPrice().getAmount(),
+                orderCreatedEvent.getOrder().getOrderStatus().name()
+            );
+            
+            log.info("=== DEBUG: Event data: {} ===", eventData);
+            
+            outboxService.saveEvent(
+                orderCreatedEvent.getOrder().getId().getValue(),
+                "Order",
+                "OrderCreatedEvent",
+                eventData
+            );
+            
+            log.info("OrderCreatedEvent saved to outbox for order: {}", 
+                orderCreatedEvent.getOrder().getId().getValue());
+        } catch (Exception e) {
+            log.error("Failed to save event to outbox", e);
+            // Don't throw exception to avoid breaking the transaction
+        }
     }
 }
