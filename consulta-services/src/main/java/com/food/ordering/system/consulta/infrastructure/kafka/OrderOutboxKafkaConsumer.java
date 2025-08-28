@@ -29,7 +29,16 @@ public class OrderOutboxKafkaConsumer {
         try {
             log.info("Received message from OrderCreatedEvent topic: {}", message);
             
-            JsonNode jsonNode = objectMapper.readTree(message);
+            // The message might be double-encoded JSON string, so we need to parse it twice
+            String actualMessage = message;
+            if (message.startsWith("\"") && message.endsWith("\"")) {
+                // Remove outer quotes and unescape
+                actualMessage = message.substring(1, message.length() - 1)
+                        .replace("\\\"", "\"")
+                        .replace("\\\\", "\\");
+            }
+            
+            JsonNode jsonNode = objectMapper.readTree(actualMessage);
             
             // The message structure is the direct event data:
             // {
@@ -46,7 +55,7 @@ public class OrderOutboxKafkaConsumer {
                     .aggregateId(UUID.fromString(jsonNode.get("orderId").asText()))
                     .aggregateType("Order")
                     .eventType("OrderCreatedEvent")
-                    .eventData(message)
+                    .eventData(actualMessage)
                     .createdAt(LocalDateTime.now())
                     .processed(false)
                     .orderId(UUID.fromString(jsonNode.get("orderId").asText()))
@@ -55,8 +64,6 @@ public class OrderOutboxKafkaConsumer {
                     .price(jsonNode.get("price").asDouble())
                     .orderStatus(jsonNode.get("orderStatus").asText())
                     .build();
-            
-
             
             // Save to database
             orderOutboxRepository.save(orderOutboxEntity);

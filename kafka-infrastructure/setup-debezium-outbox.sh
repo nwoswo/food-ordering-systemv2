@@ -5,11 +5,9 @@ echo ""
 
 # Esperar a que Kafka Connect esté listo
 echo "⏳ Esperando a que Kafka Connect esté listo..."
-sleep 45
-
 # Verificar si Kafka Connect está disponible
 until curl -s http://localhost:8083/connectors > /dev/null; do
-    echo "Esperando Kafka Connect..."
+    echo -n "."
     sleep 10
 done
 
@@ -21,14 +19,23 @@ echo "🔍 Verificando conectores disponibles..."
 curl -s http://localhost:8083/connector-plugins | jq '.[] | select(.class | contains("PostgresConnector"))'
 
 echo ""
-echo "📦 Creando conector Debezium para order-service outbox..."
-curl -X POST http://localhost:8083/connectors \
-  -H "Content-Type: application/json" \
-  -d @debezium-order-outbox-connector.json
+CONNECTOR_NAME="order-outbox-connector"
+
+echo "🔍 Verificando si el conector '$CONNECTOR_NAME' ya existe..."
+STATUS_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://localhost:8083/connectors/$CONNECTOR_NAME")
+
+if [ "$STATUS_CODE" -eq 200 ]; then
+  echo "✅ El conector '$CONNECTOR_NAME' ya existe. No se tomarán acciones."
+else
+  echo "📦 Creando conector Debezium para '$CONNECTOR_NAME'..."
+  curl -s -X POST http://localhost:8083/connectors \
+    -H "Content-Type: application/json" \
+    -d @debezium-order-outbox-connector.json
+fi
 
 echo ""
 echo "🔍 Verificando conector creado..."
-curl -s http://localhost:8083/connectors/order-outbox-connector/status | jq .
+curl -s "http://localhost:8083/connectors/$CONNECTOR_NAME/status" | jq .
 
 echo ""
 echo "📋 Listando todos los conectores..."
@@ -40,7 +47,7 @@ echo ""
 echo "🔗 URLs útiles:"
 echo "   - Kafka Connect REST API: http://localhost:8083"
 echo "   - Conectores: http://localhost:8083/connectors"
-echo "   - Estado del conector: http://localhost:8083/connectors/order-outbox-connector/status"
+echo "   - Estado del conector: http://localhost:8083/connectors/$CONNECTOR_NAME/status"
 echo "   - Plugins disponibles: http://localhost:8083/connector-plugins"
 echo ""
 echo "📊 Para ver los eventos en Kafka:"

@@ -1,6 +1,5 @@
 FROM amazoncorretto:17.0.16
 WORKDIR /app
-ARG JAR_FILE
-COPY build/libs/${JAR_FILE} app.jar
-EXPOSE 8185
+COPY build/libs/consulta-service-1.0.0.jar app.jar
+EXPOSE 8186
 ENTRYPOINT ["java", "-jar", "app.jar"]
