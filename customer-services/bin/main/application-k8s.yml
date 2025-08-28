@@ -1,0 +1,26 @@
+server:
+  port: 8184
+
+logging:
+  level:
+    com.food.ordering.system: DEBUG
+    org.flywaydb: DEBUG
+
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: none
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://postgres-service:5432/postgres?currentSchema=customer&binaryTransfer=true&reWriteBatchedInserts=true&stringtype=unspecified}
+    username: ${SPRING_DATASOURCE_USERNAME:postgres}
+    password: ${SPRING_DATASOURCE_PASSWORD:admin}
+    driver-class-name: org.postgresql.Driver
+
+  ##Flyway
+  flyway:
+    enabled: true
+    locations: classpath:db
+    baseline-on-migrate: true
+    schemas: customer
+    default-schema: customer
+    create-schemas: true

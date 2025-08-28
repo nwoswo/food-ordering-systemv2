@@ -1,0 +1,105 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lower-case-service-id: true
+      routes:
+        # Order Service
+        - id: order-service
+          uri: lb://order-service
+          predicates:
+            - Path=/api/orders/**
+          filters:
+            - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: order-service-circuit-breaker
+                fallbackUri: forward:/fallback/order-service
+
+        # Payment Service
+        - id: payment-service
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/payments/**
+          filters:
+            - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: payment-service-circuit-breaker
+                fallbackUri: forward:/fallback/payment-service
+
+        # Restaurant Service
+        - id: restaurant-service
+          uri: lb://restaurant-service
+          predicates:
+            - Path=/api/restaurants/**
+          filters:
+            - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: restaurant-service-circuit-breaker
+                fallbackUri: forward:/fallback/restaurant-service
+
+        # Customer Service
+        - id: customer-service
+          uri: lb://customer-service
+          predicates:
+            - Path=/api/customers/**
+          filters:
+            - StripPrefix=1
+            - name: CircuitBreaker
+              args:
+                name: customer-service-circuit-breaker
+                fallbackUri: forward:/fallback/customer-service
+
+        # Health Check Routes
+        - id: order-service-health
+          uri: lb://order-service
+          predicates:
+            - Path=/api/health/orders
+          filters:
+            - RewritePath=/api/health/orders, /orders/health
+
+        - id: payment-service-health
+          uri: lb://payment-service
+          predicates:
+            - Path=/api/health/payments
+          filters:
+            - RewritePath=/api/health/payments, /payments/health
+
+        - id: restaurant-service-health
+          uri: lb://restaurant-service
+          predicates:
+            - Path=/api/health/restaurants
+          filters:
+            - RewritePath=/api/health/restaurants, /restaurants/health
+
+        - id: customer-service-health
+          uri: lb://customer-service
+          predicates:
+            - Path=/api/health/customers
+          filters:
+            - RewritePath=/api/health/customers, /customers/health
+
+# Actuator configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,gateway
+  endpoint:
+    health:
+      show-details: always
+
+# Logging
+logging:
+  level:
+    org.springframework.cloud.gateway: DEBUG
+    reactor.netty: DEBUG

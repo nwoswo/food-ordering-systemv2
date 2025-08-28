@@ -1,0 +1,145 @@
+# Kafka Broker 1 Only - Single Broker Configuration
+# This matches the working Docker Compose configuration
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: kafka-broker-1-pvc
+  namespace: kafka-infrastructure
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-broker-1
+  namespace: kafka-infrastructure
+  labels:
+    app: kafka-broker-1
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-broker-1
+  template:
+    metadata:
+      labels:
+        app: kafka-broker-1
+    spec:
+      terminationGracePeriodSeconds: 60
+      containers:
+      - name: kafka
+        image: confluentinc/cp-kafka:7.4.0
+        ports:
+        - containerPort: 9092
+          name: plaintext
+        - containerPort: 9093
+          name: controller
+        - containerPort: 9094
+          name: external
+        env:
+        # Single broker configuration - matches Docker Compose
+        - name: KAFKA_NODE_ID
+          value: "1"
+        - name: KAFKA_PROCESS_ROLES
+          value: "broker,controller"
+        - name: KAFKA_CONTROLLER_QUORUM_VOTERS
+          value: "1@kafka-broker-1:9093"
+        - name: CLUSTER_ID
+          value: "4L6g3nShT-eMCtK--X86sw"
+        - name: KAFKA_LISTENERS
+          value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094"
+        - name: KAFKA_ADVERTISED_LISTENERS
+          value: "PLAINTEXT://kafka-broker-1:9092,EXTERNAL://kafka-broker-1:9094"
+        - name: KAFKA_CONTROLLER_LISTENER_NAMES
+          value: "CONTROLLER"
+        - name: KAFKA_INTER_BROKER_LISTENER_NAME
+          value: "PLAINTEXT"
+        - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+          value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT"
+        - name: KAFKA_LOG_DIRS
+          value: "/var/lib/kafka/data"
+        - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+          value: "1"
+        - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_NUM_PARTITIONS
+          value: "3"
+        - name: KAFKA_DEFAULT_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_MIN_INSYNC_REPLICAS
+          value: "1"
+        - name: KAFKA_AUTO_CREATE_TOPICS_ENABLE
+          value: "true"
+        - name: KAFKA_DELETE_TOPIC_ENABLE
+          value: "true"
+        - name: KAFKA_LOG4J_ROOT_LOGLEVEL
+          value: "INFO"
+        - name: KAFKA_LOG4J_LOGGERS
+          value: "org.apache.kafka.clients.NetworkClient=WARN,kafka.producer.async.DefaultEventHandler=DEBUG,state.change.logger=INFO"
+        volumeMounts:
+        - name: kafka-data
+          mountPath: /var/lib/kafka/data
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "500m"
+          limits:
+            memory: "1Gi"
+            cpu: "1000m"
+        livenessProbe:
+          exec:
+            command:
+            - kafka-broker-api-versions
+            - --bootstrap-server
+            - localhost:9092
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 5
+        readinessProbe:
+          exec:
+            command:
+            - kafka-broker-api-versions
+            - --bootstrap-server
+            - localhost:9092
+          initialDelaySeconds: 10
+          periodSeconds: 5
+          timeoutSeconds: 5
+          failureThreshold: 5
+      volumes:
+      - name: kafka-data
+        persistentVolumeClaim:
+          claimName: kafka-broker-1-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-broker-1
+  namespace: kafka-infrastructure
+  labels:
+    app: kafka-broker-1
+spec:
+  type: ClusterIP
+  ports:
+  - port: 9092
+    targetPort: 9092
+    protocol: TCP
+    name: plaintext
+  - port: 9093
+    targetPort: 9093
+    protocol: TCP
+    name: controller
+  - port: 9094
+    targetPort: 9094
+    protocol: TCP
+    name: external
+  selector:
+    app: kafka-broker-1

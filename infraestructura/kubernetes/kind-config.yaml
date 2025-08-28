@@ -1,0 +1,46 @@
+# Kind Cluster Configuration for Kafka Infrastructure
+# This configuration creates a cluster optimized for running Kafka and PostgreSQL
+
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+
+# Cluster name
+name: kafka-infrastructure
+
+# Nodes configuration
+nodes:
+# Control plane node
+- role: control-plane
+  kubeadmConfigPatches:
+  - |
+    kind: InitConfiguration
+    nodeRegistration:
+      kubeletExtraArgs:
+        node-labels: "ingress-ready=true"
+  extraPortMappings:
+  # Kafka UI
+  - containerPort: 8090
+    hostPort: 8090
+    protocol: TCP
+  # Kafka Connect REST API
+  - containerPort: 8083
+    hostPort: 8083
+    protocol: TCP
+  # PostgreSQL (for external access if needed)
+  - containerPort: 5432
+    hostPort: 5432
+    protocol: TCP
+
+# Worker nodes (optional, for better resource distribution)
+- role: worker
+- role: worker
+
+# Feature gates and runtime config
+featureGates:
+  # Enable features that might be needed
+  PodSecurity: true
+
+# Runtime config
+runtimeConfig:
+  # Enable admission controllers
+  admissionregistration.k8s.io/v1: "true"
