@@ -17,20 +17,37 @@ dependencyManagement {
 }
 
 dependencies {
-    implementation project(':common-libraries')
-    implementation 'org.springframework.boot:spring-boot-starter-web'
-    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
-    implementation 'org.springframework.kafka:spring-kafka'
-    implementation 'org.springframework.boot:spring-boot-starter-validation'
-    implementation 'org.flywaydb:flyway-core'
-    implementation 'org.postgresql:postgresql'
-    implementation 'org.mapstruct:mapstruct:1.5.5.Final'
-    compileOnly 'org.projectlombok:lombok'
-    annotationProcessor 'org.projectlombok:lombok'
-    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
-    testImplementation 'org.springframework.kafka:spring-kafka-test'
+    // 🔁 Módulos internos compartidos
+    implementation project(':common-libraries') // Librerías comunes del monorepo
+
+    // 🌐 Web y validación
+    implementation 'org.springframework.boot:spring-boot-starter-web' // Soporte para controladores REST y MVC
+    implementation 'org.springframework.boot:spring-boot-starter-validation' // Validación con Bean Validation (JSR-380)
+
+    // 🗃️ Persistencia y migraciones
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa' // Integración con JPA/Hibernate
+    implementation 'org.flywaydb:flyway-core' // Migraciones de base de datos
+    implementation 'org.postgresql:postgresql' // Driver JDBC para PostgreSQL
+
+    // 🧪 Testing
+    testImplementation 'org.springframework.boot:spring-boot-starter-test' // Framework de pruebas para Spring Boot
+    testImplementation 'org.springframework.kafka:spring-kafka-test' // Utilidades para testear Kafka
+
+    // 🧵 Kafka y mensajería
+    implementation 'org.springframework.kafka:spring-kafka' // Integración con Apache Kafka
+
+    // 🧠 MapStruct para mapeo entre DTOs y entidades
+    implementation 'org.mapstruct:mapstruct:1.5.5.Final' // API de MapStruct
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final' // Procesador de anotaciones para generar mapeos
+
+    // 🧰 Utilidades de desarrollo
+    compileOnly 'org.projectlombok:lombok' // Anotaciones para reducir boilerplate (solo en compilación)
+    annotationProcessor 'org.projectlombok:lombok' // Procesador de anotaciones de Lombok
+
+    // 📊 Observabilidad y monitoreo
+    implementation 'org.springframework.boot:spring-boot-starter-actuator' // Endpoints de salud, métricas, etc.
 }
+
 
 bootJar {
     archiveBaseName = 'consulta-service'

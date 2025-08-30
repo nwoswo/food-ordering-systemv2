@@ -1,7 +1,142 @@
-# Kafka Complete Configuration
-# This file contains all Kafka-related resources for the infrastructure
+# Infraestructura Base Consolidada
+# Este archivo contiene PostgreSQL, Kafka brokers y Kafka UI
 ---
-# Kafka Broker 1 Deployment
+# Secret para PostgreSQL
+apiVersion: v1
+kind: Secret
+metadata:
+  name: postgres-secret
+  namespace: kafka-infrastructure
+type: Opaque
+data:
+  POSTGRES_PASSWORD: YWRtaW4=  # admin en base64
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-pvc-new
+  namespace: kafka-infrastructure
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+  storageClassName: standard
+---
+# PostgreSQL Deployment y Service
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  namespace: kafka-infrastructure
+  labels:
+    app: postgres
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      securityContext:
+        runAsUser: 999
+        runAsGroup: 999
+        fsGroup: 999
+      initContainers:
+      - name: init-postgres
+        image: postgres:13
+        command: ["sh", "-c", "chown -R 999:999 /var/lib/postgresql/data && chmod -R 700 /var/lib/postgresql/data"]
+        securityContext:
+          runAsUser: 0
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+      containers:
+      - name: postgres
+        image: postgres:13
+        args:
+          - "-c"
+          - "config_file=/etc/postgresql/postgresql.conf"
+        ports:
+        - containerPort: 5432
+        env:
+        - name: POSTGRES_DB
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_DB
+        - name: POSTGRES_USER
+          valueFrom:
+            configMapKeyRef:
+              name: postgres-config
+              key: POSTGRES_USER
+        - name: POSTGRES_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secret
+              key: POSTGRES_PASSWORD
+        volumeMounts:
+        - name: postgres-storage
+          mountPath: /var/lib/postgresql/data
+        - name: postgres-conf
+          mountPath: /etc/postgresql/postgresql.conf
+          subPath: postgresql.conf
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "250m"
+          limits:
+            memory: "1Gi"
+            cpu: "500m"
+        livenessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 30
+          periodSeconds: 10
+        readinessProbe:
+          exec:
+            command:
+            - pg_isready
+            - -U
+            - postgres
+          initialDelaySeconds: 5
+          periodSeconds: 5
+      volumes:
+      - name: postgres-storage
+        persistentVolumeClaim:
+          claimName: postgres-pvc-new
+      - name: postgres-config
+        configMap:
+          name: postgres-config
+      - name: postgres-conf
+        configMap:
+          name: postgres-conf
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: kafka-infrastructure
+  labels:
+    app: postgres
+spec:
+  type: ClusterIP
+  ports:
+  - port: 5432
+    targetPort: 5432
+    protocol: TCP
+    name: postgres
+  selector:
+    app: postgres
+---
+# Kafka Broker 1
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -28,8 +163,6 @@ spec:
           name: plaintext
         - containerPort: 9093
           name: controller
-        - containerPort: 9094
-          name: external
         env:
         - name: KAFKA_NODE_ID
           value: "1"
@@ -40,15 +173,15 @@ spec:
         - name: CLUSTER_ID
           value: "4L6g3nShT-eMCtK--X86sw"
         - name: KAFKA_LISTENERS
-          value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094"
+          value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
         - name: KAFKA_ADVERTISED_LISTENERS
-          value: "PLAINTEXT://kafka-broker-1:9092,EXTERNAL://kafka-broker-1:9094"
+          value: "PLAINTEXT://kafka-broker-1:9092"
         - name: KAFKA_CONTROLLER_LISTENER_NAMES
           value: "CONTROLLER"
         - name: KAFKA_INTER_BROKER_LISTENER_NAME
           value: "PLAINTEXT"
         - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
-          value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT"
+          value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
         - name: KAFKA_LOG_DIRS
           value: "/var/lib/kafka/data"
         - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
@@ -84,9 +217,8 @@ spec:
       volumes:
       - name: kafka-data
         emptyDir: {}
-
 ---
-# Kafka Broker 2 Deployment
+# Kafka Broker 2
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -113,8 +245,6 @@ spec:
           name: plaintext
         - containerPort: 9093
           name: controller
-        - containerPort: 9094
-          name: external
         env:
         - name: KAFKA_NODE_ID
           value: "2"
@@ -125,15 +255,15 @@ spec:
         - name: CLUSTER_ID
           value: "4L6g3nShT-eMCtK--X86sw"
         - name: KAFKA_LISTENERS
-          value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094"
+          value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
         - name: KAFKA_ADVERTISED_LISTENERS
-          value: "PLAINTEXT://kafka-broker-2:9092,EXTERNAL://kafka-broker-2:9094"
+          value: "PLAINTEXT://kafka-broker-2:9092"
         - name: KAFKA_CONTROLLER_LISTENER_NAMES
           value: "CONTROLLER"
         - name: KAFKA_INTER_BROKER_LISTENER_NAME
           value: "PLAINTEXT"
         - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
-          value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT"
+          value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
         - name: KAFKA_LOG_DIRS
           value: "/var/lib/kafka/data"
         - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
@@ -169,9 +299,8 @@ spec:
       volumes:
       - name: kafka-data
         emptyDir: {}
-
 ---
-# Kafka Broker 3 Deployment
+# Kafka Broker 3
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -198,8 +327,6 @@ spec:
           name: plaintext
         - containerPort: 9093
           name: controller
-        - containerPort: 9094
-          name: external
         env:
         - name: KAFKA_NODE_ID
           value: "3"
@@ -210,15 +337,15 @@ spec:
         - name: CLUSTER_ID
           value: "4L6g3nShT-eMCtK--X86sw"
         - name: KAFKA_LISTENERS
-          value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093,EXTERNAL://0.0.0.0:9094"
+          value: "PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093"
         - name: KAFKA_ADVERTISED_LISTENERS
-          value: "PLAINTEXT://kafka-broker-3:9092,EXTERNAL://kafka-broker-3:9094"
+          value: "PLAINTEXT://kafka-broker-3:9092"
         - name: KAFKA_CONTROLLER_LISTENER_NAMES
           value: "CONTROLLER"
         - name: KAFKA_INTER_BROKER_LISTENER_NAME
           value: "PLAINTEXT"
         - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
-          value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,EXTERNAL:PLAINTEXT"
+          value: "PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT"
         - name: KAFKA_LOG_DIRS
           value: "/var/lib/kafka/data"
         - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
@@ -254,9 +381,8 @@ spec:
       volumes:
       - name: kafka-data
         emptyDir: {}
-
 ---
-# Kafka Services
+# Services para Kafka Brokers
 apiVersion: v1
 kind: Service
 metadata:
@@ -275,10 +401,6 @@ spec:
     targetPort: 9093
     protocol: TCP
     name: controller
-  - port: 9094
-    targetPort: 9094
-    protocol: TCP
-    name: external
   selector:
     app: kafka-broker-1
 ---
@@ -300,10 +422,6 @@ spec:
     targetPort: 9093
     protocol: TCP
     name: controller
-  - port: 9094
-    targetPort: 9094
-    protocol: TCP
-    name: external
   selector:
     app: kafka-broker-2
 ---
@@ -325,9 +443,63 @@ spec:
     targetPort: 9093
     protocol: TCP
     name: controller
-  - port: 9094
-    targetPort: 9094
-    protocol: TCP
-    name: external
   selector:
     app: kafka-broker-3
+---
+# Kafka UI
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-ui
+  namespace: kafka-infrastructure
+  labels:
+    app: kafka-ui
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-ui
+  template:
+    metadata:
+      labels:
+        app: kafka-ui
+    spec:
+      containers:
+      - name: kafka-ui
+        image: provectuslabs/kafka-ui:latest
+        ports:
+        - containerPort: 8080
+          name: http
+        env:
+        - name: KAFKA_CLUSTERS_0_NAME
+          value: "local"
+        - name: KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS
+          value: "kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092"
+        - name: KAFKA_CLUSTERS_0_ZOOKEEPER
+          value: ""
+        - name: KAFKA_CLUSTERS_0_READONLY
+          value: "false"
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "100m"
+          limits:
+            memory: "512Mi"
+            cpu: "200m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-ui
+  namespace: kafka-infrastructure
+  labels:
+    app: kafka-ui
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8080
+    targetPort: 8080
+    protocol: TCP
+    name: http
+  selector:
+    app: kafka-ui

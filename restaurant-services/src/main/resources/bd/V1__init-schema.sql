@@ -1,6 +1,6 @@
 CREATE SCHEMA IF NOT EXISTS restaurant;
 
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 DROP TABLE IF EXISTS restaurant.restaurants CASCADE;
 

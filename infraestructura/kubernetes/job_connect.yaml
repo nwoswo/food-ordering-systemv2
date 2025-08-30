@@ -1,0 +1,115 @@
+# Jobs Consolidados para la Infraestructura Kafka
+# Este archivo contiene todos los Jobs necesarios para el despliegue
+---
+# Job para registrar el conector Debezium
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: debezium-connector-setup
+  namespace: kafka-infrastructure
+spec:
+  backoffLimit: 5
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: debezium-setup
+        image: curlimages/curl:latest
+        command:
+        - /bin/sh
+        - -c
+        - |
+          echo "=== Debezium Connector Setup Job Started ==="
+          
+          echo "Waiting for Kafka Connect to be ready..."
+          max_attempts=60
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            if curl -s -f http://kafka-connect:8083 > /dev/null; then
+              echo "Kafka Connect is ready (HTTP 200)"
+              break
+            fi
+            echo "Kafka Connect not ready yet, attempt $((attempt + 1))/$max_attempts"
+            sleep 10
+            attempt=$((attempt + 1))
+          done
+          
+          if [ $attempt -eq $max_attempts ]; then
+            echo "ERROR: Kafka Connect did not become ready in time"
+            exit 1
+          fi
+          
+          echo "Waiting additional time for Kafka Connect to fully initialize..."
+          sleep 30
+          
+          echo "Checking if connector already exists..."
+          if curl -s -f http://kafka-connect:8083/connectors/order-outbox-connector > /dev/null; then
+            echo "Connector already exists, checking status..."
+            status=$(curl -s http://kafka-connect:8083/connectors/order-outbox-connector/status | jq -r '.connector.state')
+            echo "Connector status: $status"
+            if [ "$status" = "RUNNING" ]; then
+              echo "Connector is already running, setup complete"
+              exit 0
+            else
+              echo "Connector exists but not running, restarting..."
+              curl -s -X POST http://kafka-connect:8083/connectors/order-outbox-connector/restart
+              sleep 10
+            fi
+          fi
+          
+          echo "Registering Debezium connector..."
+          echo "JSON configuration:"
+          cat /config/order-outbox-connector.json
+          
+          response=$(curl -s -w "%{http_code}" -X POST \
+            -H "Content-Type: application/json" \
+            --data @/config/order-outbox-connector.json \
+            http://kafka-connect:8083/connectors)
+          
+          http_code="${response: -3}"
+          response_body="${response%???}"
+          
+          echo "Registration response (HTTP $http_code): $response_body"
+          
+          if [ "$http_code" = "201" ] || [ "$http_code" = "409" ]; then
+            echo "Connector registered successfully"
+          else
+            echo "Failed to register connector"
+            exit 1
+          fi
+          
+          echo "Waiting for connector to start..."
+          max_wait=60
+          wait_attempt=0
+          while [ $wait_attempt -lt $max_wait ]; do
+            status_response=$(curl -s http://kafka-connect:8083/connectors/order-outbox-connector/status)
+            connector_state=$(echo "$status_response" | jq -r '.connector.state // "UNKNOWN"')
+            echo "Connector state: $connector_state (attempt $((wait_attempt + 1))/$max_wait)"
+            
+            if [ "$connector_state" = "RUNNING" ]; then
+              echo "Connector is now RUNNING!"
+              break
+            elif [ "$connector_state" = "FAILED" ]; then
+              echo "ERROR: Connector failed to start"
+              echo "Full status response: $status_response"
+              exit 1
+            fi
+            
+            sleep 10
+            wait_attempt=$((wait_attempt + 1))
+          done
+          
+          if [ $wait_attempt -eq $max_wait ]; then
+            echo "ERROR: Connector did not start in time"
+            echo "Final status: $status_response"
+            exit 1
+          fi
+          
+          echo "=== Debezium Connector Setup Completed Successfully ==="
+        volumeMounts:
+        - name: debezium-config
+          mountPath: /config
+      volumes:
+      - name: debezium-config
+        configMap:
+          name: debezium-connector-config

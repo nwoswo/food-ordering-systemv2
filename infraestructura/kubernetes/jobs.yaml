@@ -1,0 +1,118 @@
+# Jobs Consolidados para la Infraestructura Kafka
+# Este archivo contiene todos los Jobs necesarios para el despliegue
+---
+# Job para inicializar la base de datos
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: db-init
+  namespace: kafka-infrastructure
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: db-init
+        image: postgres:15
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "=== Database Initialization Job Started ==="
+          
+          echo "Waiting for PostgreSQL to be ready..."
+          until pg_isready -h postgres -p 5432 -U postgres; do
+            echo "PostgreSQL not ready yet, waiting..."
+            sleep 5
+          done
+          echo "PostgreSQL is ready!"
+          
+          echo "Creating schema and table..."
+          PGPASSWORD=admin psql -h postgres -p 5432 -U postgres -d postgres << 'EOF'
+          
+          -- Habilitar extensión para UUIDs
+          CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+          
+          -- Crear esquema si no existe
+          CREATE SCHEMA IF NOT EXISTS orden;
+          
+          -- Crear tabla outbox_events si no existe
+          CREATE TABLE orden.outbox_events
+          (
+              id uuid NOT NULL DEFAULT public.uuid_generate_v4(),
+              aggregate_id uuid NOT NULL,
+              aggregate_type character varying(255) NOT NULL,
+              event_type character varying(255) NOT NULL,
+              event_data jsonb NOT NULL,
+              created_at timestamp without time zone NOT NULL DEFAULT now(),
+              processed boolean NOT NULL DEFAULT false,
+              CONSTRAINT outbox_events_pkey PRIMARY KEY (id)
+          );
+
+
+
+          CREATE INDEX "IDX_OUTBOX_AGGREGATE_ID" ON "orden".outbox_events USING btree
+              (aggregate_id ASC NULLS LAST)
+              TABLESPACE pg_default;
+
+          CREATE INDEX "IDX_OUTBOX_PROCESSED" ON "orden".outbox_events USING btree
+              (processed ASC NULLS LAST)
+              TABLESPACE pg_default;
+
+          CREATE INDEX "IDX_OUTBOX_CREATED_AT" ON "orden".outbox_events USING btree
+              (created_at ASC NULLS LAST)
+              TABLESPACE pg_default;
+          
+          -- Verificar que la tabla existe
+          SELECT 'Table orden.outbox_events exists' as status;
+          
+          EOF
+          
+          if [ $? -eq 0 ]; then
+            echo "Database initialization completed successfully!"
+          else
+            echo "Database initialization failed!"
+            exit 1
+          fi
+          
+          echo "=== Database Initialization Job Completed ==="
+        env:
+        - name: PGPASSWORD
+          value: "admin"
+---
+# Job para inicializar tópicos de Kafka
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: kafka-init
+  namespace: kafka-infrastructure
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+      - name: kafka-init
+        image: confluentinc/cp-kafka:7.4.0
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "Waiting for Kafka to be ready..."
+          cub kafka-ready -b kafka-broker-1:9092 1 30
+          cub kafka-ready -b kafka-broker-2:9092 1 30
+          cub kafka-ready -b kafka-broker-3:9092 1 30
+          echo "Deleting existing Kafka Connect topics..."
+          kafka-topics --delete --topic connect-configs --bootstrap-server kafka-broker-1:9092 || true
+          kafka-topics --delete --topic connect-offsets --bootstrap-server kafka-broker-1:9092 || true
+          kafka-topics --delete --topic connect-status --bootstrap-server kafka-broker-1:9092 || true
+          echo "Creating Kafka Connect topics..."
+          kafka-topics --create --if-not-exists --bootstrap-server kafka-broker-1:9092 --replication-factor 3 --partitions 1 --topic connect-configs --config min.insync.replicas=2 --config cleanup.policy=compact
+          kafka-topics --create --if-not-exists --bootstrap-server kafka-broker-1:9092 --replication-factor 3 --partitions 25 --topic connect-offsets --config min.insync.replicas=2 --config cleanup.policy=compact
+          kafka-topics --create --if-not-exists --bootstrap-server kafka-broker-1:9092 --replication-factor 3 --partitions 1 --topic connect-status --config min.insync.replicas=2 --config cleanup.policy=compact
+          echo "Creating application topics..."
+          kafka-topics --create --if-not-exists --bootstrap-server kafka-broker-1:9092 --replication-factor 3 --partitions 3 --topic payment-request
+          kafka-topics --create --if-not-exists --bootstrap-server kafka-broker-1:9092 --replication-factor 3 --partitions 3 --topic payment-response
+          kafka-topics --create --if-not-exists --bootstrap-server kafka-broker-1:9092 --replication-factor 3 --partitions 3 --topic restaurant-approval-request
+          kafka-topics --create --if-not-exists --bootstrap-server kafka-broker-1:9092 --replication-factor 3 --partitions 3 --topic restaurant-approval-response
+          echo "Topics created successfully!"
+          kafka-topics --list --bootstrap-server kafka-broker-1:9092

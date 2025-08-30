@@ -1,0 +1,138 @@
+# Kafka Connect Consolidado
+# Este archivo contiene el deployment y service de Kafka Connect
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kafka-connect
+  namespace: kafka-infrastructure
+  labels:
+    app: kafka-connect
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka-connect
+  template:
+    metadata:
+      labels:
+        app: kafka-connect
+    spec:
+      securityContext:
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+      initContainers:
+      - name: wait-for-kafka
+        image: confluentinc/cp-kafka:7.4.0
+        command:
+        - /bin/bash
+        - -c
+        - |
+          echo "Waiting for Kafka brokers to be ready..."
+          cub kafka-ready -b kafka-broker-1.kafka-infrastructure.svc.cluster.local:9092 1 60
+          cub kafka-ready -b kafka-broker-2.kafka-infrastructure.svc.cluster.local:9092 1 60
+          cub kafka-ready -b kafka-broker-3.kafka-infrastructure.svc.cluster.local:9092 1 60
+          echo "Kafka brokers are ready!"
+        env:
+        - name: KAFKA_LOG4J_OPTS
+          value: "-Dlog4j.configuration=file:/etc/kafka/log4j.properties"
+        securityContext:
+          runAsUser: 1000
+      containers:
+      - name: kafka-connect
+        image: debezium/connect:2.4
+        ports:
+        - containerPort: 8083
+          name: http
+        env:
+        - name: BOOTSTRAP_SERVERS
+          value: "kafka-broker-1.kafka-infrastructure.svc.cluster.local:9092,kafka-broker-2.kafka-infrastructure.svc.cluster.local:9092,kafka-broker-3.kafka-infrastructure.svc.cluster.local:9092"
+        - name: GROUP_ID
+          value: "kafka-connect-group"
+        - name: CONFIG_STORAGE_TOPIC
+          value: "connect-configs"
+        - name: OFFSET_STORAGE_TOPIC
+          value: "connect-offsets"
+        - name: STATUS_STORAGE_TOPIC
+          value: "connect-status"
+        - name: CONFIG_STORAGE_REPLICATION_FACTOR
+          value: "3"
+        - name: OFFSET_STORAGE_REPLICATION_FACTOR
+          value: "3"
+        - name: STATUS_STORAGE_REPLICATION_FACTOR
+          value: "3"
+        - name: CONFIG_STORAGE_MIN_INSYNC_REPLICAS
+          value: "2"
+        - name: OFFSET_STORAGE_MIN_INSYNC_REPLICAS
+          value: "2"
+        - name: STATUS_STORAGE_MIN_INSYNC_REPLICAS
+          value: "2"
+        - name: KEY_CONVERTER
+          value: "org.apache.kafka.connect.json.JsonConverter"
+        - name: VALUE_CONVERTER
+          value: "org.apache.kafka.connect.json.JsonConverter"
+        - name: KEY_CONVERTER_SCHEMAS_ENABLE
+          value: "false"
+        - name: VALUE_CONVERTER_SCHEMAS_ENABLE
+          value: "false"
+        - name: CONNECT_PLUGIN_PATH
+          value: "/kafka/connect"
+        - name: REST_ADVERTISED_HOST_NAME
+          value: "kafka-connect.kafka-infrastructure.svc.cluster.local"
+        - name: KAFKA_HEAP_OPTS
+          value: "-Xms1g -Xmx2g"
+        - name: KAFKA_OPTS
+          value: "-Djava.net.preferIPv4Stack=true"
+        - name: LOG_DIR
+          value: "/tmp/logs"
+        - name: CONNECT_LOG4J_LOGGERS
+          value: "org.apache.kafka=INFO,org.apache.zookeeper=INFO,org.apache.kafka.connect=DEBUG,io.debezium=DEBUG"
+        volumeMounts:
+        - name: debezium-config
+          mountPath: /config
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "500m"
+          limits:
+            memory: "4Gi"
+            cpu: "1000m"
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8083
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8083
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+      volumes:
+      - name: debezium-config
+        configMap:
+          name: debezium-connector-config
+      - name: kafka-connect-config
+        configMap:
+          name: kafka-connect-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-connect
+  namespace: kafka-infrastructure
+  labels:
+    app: kafka-connect
+spec:
+  type: LoadBalancer
+  ports:
+  - port: 8083
+    targetPort: 8083
+    protocol: TCP
+    name: http
+  selector:
+    app: kafka-connect

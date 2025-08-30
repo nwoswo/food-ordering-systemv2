@@ -47,6 +47,8 @@ spring:
     schemas: orden
     default-schema: orden
     create-schemas: true
+    baseline-version: 0
+    validate-on-migrate: true
 
 
 kafka-config:

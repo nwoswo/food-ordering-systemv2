@@ -1,249 +1,229 @@
-# Kafka Infrastructure - Kubernetes Deployment
+# Food Ordering System - Kubernetes Deployment
 
-This directory contains Kubernetes YAML manifests for deploying the complete Kafka infrastructure used in the Food Ordering System.
+Este directorio contiene todos los archivos necesarios para desplegar el **Food Ordering System** en Kubernetes usando Kind.
 
-## 🏗️ Architecture
+## 📁 Estructura de Archivos
 
-The infrastructure consists of:
+### Archivos Principales
+- **`deploy.sh`** - Script principal de despliegue completo
+- **`cleanup.sh`** - Script de limpieza de recursos
+- **`kind-config.yaml`** - Configuración del cluster Kind
 
-- **PostgreSQL Database**: Primary database with logical replication enabled for Debezium
-- **Kafka Cluster**: 3-node Kafka cluster using KRaft (no Zookeeper required)
-- **Kafka Connect**: For data streaming and CDC (Change Data Capture)
-- **Debezium Connector**: PostgreSQL connector for outbox pattern implementation
-- **Kafka UI**: Web interface for monitoring and managing Kafka
+### Archivos de Infraestructura Consolidados
+- **`configmaps.yaml`** - Todos los ConfigMaps (PostgreSQL, Debezium, Kafka Connect)
+- **`infrastructure.yaml`** - Infraestructura base (PostgreSQL, Kafka brokers, Kafka UI)
+- **`kafka-connect.yaml`** - Kafka Connect deployment y service
+- **`jobs.yaml`** - Jobs de inicialización (tópicos Kafka, conector Debezium)
+- **`microservices-complete.yaml`** - Todos los microservicios
 
-## 📁 File Structure
+## 🚀 Despliegue Rápido
 
-```
-kubernetes/
-├── namespace.yaml                           # Namespace definition
-├── postgres-configmap.yaml                  # PostgreSQL configuration
-├── postgres-secret.yaml                     # PostgreSQL credentials
-├── postgres-pvc.yaml                        # PostgreSQL persistent volume claim
-├── postgres-deployment.yaml                 # PostgreSQL deployment
-├── postgres-service.yaml                    # PostgreSQL service
-├── kafka-configmap.yaml                     # Kafka configuration
-├── kafka-pvcs.yaml                          # Kafka persistent volume claims
-├── kafka-broker-1-deployment.yaml           # Kafka broker 1 deployment
-├── kafka-broker-2-deployment.yaml           # Kafka broker 2 deployment
-├── kafka-broker-3-deployment.yaml           # Kafka broker 3 deployment
-├── kafka-services.yaml                      # Kafka broker services
-├── kafka-init-job.yaml                      # Kafka topics initialization job
-├── kafka-connect-deployment.yaml            # Kafka Connect deployment
-├── kafka-connect-service.yaml               # Kafka Connect service
-├── kafka-ui-deployment.yaml                 # Kafka UI deployment
-├── kafka-ui-service.yaml                    # Kafka UI service
-├── debezium-connector-configmap.yaml        # Debezium connector configuration
-├── debezium-connector-job.yaml              # Debezium connector setup job
-├── deploy.sh                                # Deployment script
-├── cleanup.sh                               # Cleanup script
-└── README.md                                # This file
-```
+### Prerequisitos
+- Docker
+- Kind
+- kubectl
+- Gradle (para construir microservicios)
 
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Kubernetes cluster (local or cloud)
-- `kubectl` configured to access your cluster
-- Storage class that supports `ReadWriteOnce` access mode
-
-### Deployment
-
-1. **Make scripts executable:**
-   ```bash
-   chmod +x deploy.sh cleanup.sh
-   ```
-
-2. **Deploy the infrastructure:**
-   ```bash
-   ./deploy.sh
-   ```
-
-3. **Access the services:**
-   ```bash
-   # Kafka UI
-   kubectl port-forward -n kafka-infrastructure service/kafka-ui 8090:8090
-   
-   # Kafka Connect REST API
-   kubectl port-forward -n kafka-infrastructure service/kafka-connect 8083:8083
-   ```
-
-### Cleanup
-
-To remove the entire infrastructure:
-
+### Despliegue Completo
 ```bash
+# Dar permisos de ejecución
+chmod +x deploy.sh cleanup.sh
+
+# Desplegar todo el sistema
+./deploy.sh
+```
+
+### Limpieza
+```bash
+# Limpiar recursos de Kubernetes y Kind
 ./cleanup.sh
+
+# Limpiar también imágenes Docker
+./cleanup.sh --clean-images
 ```
 
-## 🔧 Configuration
+## 📋 Componentes Desplegados
 
-### Storage
+### Infraestructura Base
+- **PostgreSQL 13** - Base de datos principal
+- **Kafka 3-node KRaft Cluster** - Sin Zookeeper
+- **Kafka UI** - Interfaz web para administrar Kafka
+- **MetalLB** - Load balancer para Kind
 
-The deployment uses persistent volumes for:
-- PostgreSQL data (10Gi)
-- Kafka broker data (10Gi each)
+### Kafka Connect & Debezium
+- **Kafka Connect** - Plataforma de conectores
+- **Debezium PostgreSQL Connector** - CDC para outbox pattern
+- **Tópicos automáticos** - Configurados con `cleanup.policy=compact`
 
-Make sure your cluster has a storage class named `standard` or update the PVC configurations.
+### Microservicios
+- **Order Service** - Gestión de órdenes
+- **Payment Service** - Procesamiento de pagos
+- **Restaurant Service** - Gestión de restaurantes
+- **Customer Service** - Gestión de clientes
+- **Consulta Service** - Consultas agregadas
+- **API Gateway** - Gateway principal
 
-### Resource Limits
+## 🔗 Acceso a Servicios
 
-Default resource allocations:
-- **PostgreSQL**: 256Mi-512Mi RAM, 250m-500m CPU
-- **Kafka Brokers**: 512Mi-1Gi RAM, 500m-1000m CPU each
-- **Kafka Connect**: 512Mi-1Gi RAM, 500m-1000m CPU
-- **Kafka UI**: 256Mi-512Mi RAM, 250m-500m CPU
+### Kafka UI
+```bash
+kubectl port-forward -n kafka-infrastructure service/kafka-ui 8090:8080
+# http://localhost:8090
+```
 
-### Network Configuration
+### Kafka Connect
+```bash
+kubectl port-forward -n kafka-infrastructure service/kafka-connect 8083:8083
+# http://localhost:8083
+```
 
-- **Namespace**: `kafka-infrastructure`
-- **Kafka Cluster**: 3 brokers with replication factor 3
-- **Services**: Internal communication via ClusterIP, UI exposed via LoadBalancer
+### API Gateway
+```bash
+kubectl get svc -n kafka-infrastructure api-gateway
+# El servicio es LoadBalancer, obtendrá IP de MetalLB
+```
 
-## 📊 Monitoring
+## 📊 Monitoreo
 
-### Check Deployment Status
+### Verificar Estado
+```bash
+# Ver todos los pods
+kubectl get pods -n kafka-infrastructure
+
+# Ver todos los servicios
+kubectl get svc -n kafka-infrastructure
+
+# Ver logs de Kafka Connect
+kubectl logs -n kafka-infrastructure -l app=kafka-connect
+
+# Ver tópicos de Kafka
+kubectl exec -n kafka-infrastructure kafka-broker-1-xxx -- kafka-topics --list --bootstrap-server kafka-broker-1:9092
+```
+
+### Verificar Conector Debezium
+```bash
+# Verificar estado del conector
+kubectl exec -n kafka-infrastructure kafka-connect-xxx -- curl -s http://localhost:8083/connectors/order-outbox-connector/status
+
+# Ver logs del job de registro
+kubectl logs -n kafka-infrastructure job/debezium-connector-setup
+```
+
+## 🔧 Configuración
+
+### Variables de Entorno Importantes
+- **KAFKA_BOOTSTRAP_SERVERS**: `kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092`
+- **POSTGRES_HOST**: `postgres`
+- **POSTGRES_PORT**: `5432`
+- **POSTGRES_DB**: `postgres`
+- **POSTGRES_USER**: `postgres`
+- **POSTGRES_PASSWORD**: `admin`
+
+### Recursos Asignados
+- **Kafka Brokers**: 1Gi-2Gi RAM, 500m-1000m CPU
+- **Kafka Connect**: 2Gi-4Gi RAM, 500m-1000m CPU
+- **PostgreSQL**: 512Mi-1Gi RAM, 250m-500m CPU
+- **Microservicios**: 512Mi-1Gi RAM, 250m-500m CPU
+
+## 🐛 Troubleshooting
+
+### Problemas Comunes
+
+#### Kafka Connect no se conecta a brokers
+```bash
+# Verificar conectividad desde Kafka Connect
+kubectl exec -n kafka-infrastructure kafka-connect-xxx -- curl -s http://localhost:8083/connectors
+
+# Verificar logs de Kafka Connect
+kubectl logs -n kafka-infrastructure -l app=kafka-connect --tail=50
+```
+
+#### Microservicios no inician
+```bash
+# Verificar logs del microservicio
+kubectl logs -n kafka-infrastructure -l app=order-service
+
+# Verificar conectividad a PostgreSQL
+kubectl exec -n kafka-infrastructure order-service-xxx -- nc -zv postgres 5432
+```
+
+#### Conector Debezium no se registra
+```bash
+# Verificar que Kafka Connect esté listo
+kubectl get pods -n kafka-infrastructure -l app=kafka-connect
+
+# Re-ejecutar job de registro
+kubectl delete job debezium-connector-setup -n kafka-infrastructure
+kubectl apply -f jobs.yaml
+```
+
+## 📝 Notas Importantes
+
+1. **Persistencia**: Los datos se almacenan en `emptyDir` (se pierden al reiniciar pods)
+2. **Red**: Todos los servicios usan `ClusterIP` excepto API Gateway que usa `LoadBalancer`
+3. **Seguridad**: Configuración básica sin TLS/SASL para desarrollo
+4. **Escalabilidad**: Configurado para desarrollo local, no producción
+
+## 🔄 Actualizaciones
+
+Para actualizar un componente específico:
 
 ```bash
-kubectl get all -n kafka-infrastructure
+# Actualizar solo microservicios
+kubectl apply -f microservices-complete.yaml
+
+# Actualizar solo Kafka Connect
+kubectl apply -f kafka-connect.yaml
+
+# Actualizar solo infraestructura
+kubectl apply -f infrastructure.yaml
 ```
 
-### View Logs
+## 📚 Referencias
 
-```bash
-# PostgreSQL
-kubectl logs -n kafka-infrastructure deployment/postgres
+- [Kind Documentation](https://kind.sigs.k8s.io/)
+- [Kafka KRaft Mode](https://kafka.apache.org/documentation/#kraft)
+- [Debezium Documentation](https://debezium.io/documentation/)
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
 
-# Kafka brokers
-kubectl logs -n kafka-infrastructure deployment/kafka-broker-1
-kubectl logs -n kafka-infrastructure deployment/kafka-broker-2
-kubectl logs -n kafka-infrastructure deployment/kafka-broker-3
+## 🔄 Orden de Despliegue
 
-# Kafka Connect
-kubectl logs -n kafka-infrastructure deployment/kafka-connect
+El script de despliegue ejecuta los componentes en el siguiente orden:
 
-# Kafka UI
-kubectl logs -n kafka-infrastructure deployment/kafka-ui
+1. **Cluster Kind** - Crear cluster local
+2. **MetalLB** - Instalar load balancer
+3. **Imágenes** - Construir y cargar microservicios
+4. **Infraestructura** - PostgreSQL y Kafka brokers
+5. **Kafka Connect** - Plataforma de conectores
+6. **Base de Datos** - Crear esquema y tabla `orden.outbox_events`
+7. **Tópicos Kafka** - Inicializar tópicos de aplicación
+8. **Conector Debezium** - Registrar conector para CDC
+9. **Microservicios** - Desplegar todos los servicios
+
+### ⚠️ Importante: Inicialización de Base de Datos
+
+El conector Debezium **requiere** que la tabla `orden.outbox_events` exista antes de registrarse. El job `db-init` crea:
+
+```sql
+-- Habilitar extensión para UUIDs
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" SCHEMA public;
+
+-- Esquema
+CREATE SCHEMA IF NOT EXISTS orden;
+
+-- Tabla outbox_events
+CREATE TABLE IF NOT EXISTS orden.outbox_events (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    aggregate_id VARCHAR(255) NOT NULL,
+    aggregate_type VARCHAR(255) NOT NULL,
+    event_type VARCHAR(255) NOT NULL,
+    event_data JSONB NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP WITH TIME ZONE NULL
+);
+
+-- Índices para rendimiento
+CREATE INDEX IF NOT EXISTS idx_outbox_events_aggregate_id ON orden.outbox_events(aggregate_id);
+CREATE INDEX IF NOT EXISTS idx_outbox_events_created_at ON orden.outbox_events(created_at);
+CREATE INDEX IF NOT EXISTS idx_outbox_events_processed_at ON orden.outbox_events(processed_at);
 ```
-
-### Access Kafka UI
-
-Once deployed, access the Kafka UI at `http://localhost:8090` (after port-forwarding) to:
-- Monitor topics and partitions
-- View consumer groups
-- Browse messages
-- Manage connectors
-
-## 🔌 Kafka Connect
-
-### Connector Status
-
-Check Debezium connector status:
-
-```bash
-curl http://localhost:8083/connectors/order-outbox-connector/status
-```
-
-### Available Endpoints
-
-- **List connectors**: `GET /connectors`
-- **Get connector status**: `GET /connectors/{name}/status`
-- **Get connector config**: `GET /connectors/{name}/config`
-- **Create connector**: `POST /connectors`
-- **Delete connector**: `DELETE /connectors/{name}`
-
-## 🗄️ Database Configuration
-
-PostgreSQL is configured with:
-- Logical replication enabled (`wal_level = logical`)
-- Outbox pattern support
-- Optimized for CDC operations
-
-### Connection Details
-
-- **Host**: `postgres.kafka-infrastructure.svc.cluster.local`
-- **Port**: `5432`
-- **Database**: `postgres`
-- **Username**: `postgres`
-- **Password**: `admin`
-
-## 🔄 Topics Created
-
-The initialization job creates the following topics:
-- `connect-configs` (1 partition, RF=3)
-- `connect-offsets` (25 partitions, RF=3)
-- `connect-status` (1 partition, RF=3)
-- `payment-request` (3 partitions, RF=3)
-- `payment-response` (3 partitions, RF=3)
-- `restaurant-approval-request` (3 partitions, RF=3)
-- `restaurant-approval-response` (3 partitions, RF=3)
-
-## 🛠️ Troubleshooting
-
-### Common Issues
-
-1. **Storage Issues**
-   ```bash
-   kubectl get pvc -n kafka-infrastructure
-   kubectl describe pvc <pvc-name> -n kafka-infrastructure
-   ```
-
-2. **Pod Startup Issues**
-   ```bash
-   kubectl describe pod <pod-name> -n kafka-infrastructure
-   kubectl logs <pod-name> -n kafka-infrastructure
-   ```
-
-3. **Kafka Cluster Issues**
-   ```bash
-   # Check broker status
-   kubectl exec -n kafka-infrastructure deployment/kafka-broker-1 -- kafka-broker-api-versions --bootstrap-server localhost:9092
-   ```
-
-4. **Connector Issues**
-   ```bash
-   # Check connector logs
-   kubectl logs -n kafka-infrastructure deployment/kafka-connect
-   
-   # Check connector status
-   curl http://localhost:8083/connectors/order-outbox-connector/status
-   ```
-
-### Scaling
-
-To scale Kafka brokers:
-```bash
-kubectl scale deployment kafka-broker-1 --replicas=2 -n kafka-infrastructure
-```
-
-**Note**: Scaling Kafka requires careful consideration of partition assignments and replication factors.
-
-## 🔐 Security Notes
-
-- Default credentials are used for demonstration
-- In production, use proper secrets management
-- Consider enabling TLS for Kafka
-- Implement proper RBAC policies
-
-## 📝 Customization
-
-To customize the deployment:
-
-1. **Modify resource limits** in deployment files
-2. **Update storage sizes** in PVC files
-3. **Change Kafka configuration** in ConfigMaps
-4. **Adjust replica counts** for high availability
-
-## 🤝 Integration
-
-This infrastructure is designed to work with the Food Ordering System microservices:
-- Order Service
-- Payment Service
-- Restaurant Service
-- Customer Service
-- API Gateway
-
-The services should be configured to connect to:
-- **Kafka**: `kafka-broker-1:9092,kafka-broker-2:9092,kafka-broker-3:9092`
-- **PostgreSQL**: `postgres:5432`
