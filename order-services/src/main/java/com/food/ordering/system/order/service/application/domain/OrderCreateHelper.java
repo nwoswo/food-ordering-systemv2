@@ -27,134 +27,134 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 public class OrderCreateHelper {
 
-    private final OrderDomainService orderDomainService;
+  private final OrderDomainService orderDomainService;
 
-    private final OrderRepository orderRepository;
+  private final OrderRepository orderRepository;
 
-    private final CustomerRepository customerRepository;
+  private final CustomerRepository customerRepository;
 
-    private final RestaurantRepository restaurantRepository;
+  private final RestaurantRepository restaurantRepository;
 
-    private final OrderDataMapper orderDataMapper;
+  private final OrderDataMapper orderDataMapper;
 
-    private final OutboxService outboxService;
-    private final OrderCreatedPaymentRequestMessagePublisher orderCreatedPaymentRequestMessagePublisher;
+  private final OutboxService outboxService;
+  private final OrderCreatedPaymentRequestMessagePublisher orderCreatedPaymentRequestMessagePublisher;
 
-    public OrderCreateHelper(OrderDomainService orderDomainService,
-            OrderRepository orderRepository,
-            CustomerRepository customerRepository,
-            RestaurantRepository restaurantRepository,
-            OrderDataMapper orderDataMapper,
-            OutboxService outboxService,
-            OrderCreatedPaymentRequestMessagePublisher orderCreatedPaymentRequestMessagePublisher) {
-        this.orderDomainService = orderDomainService;
-        this.orderRepository = orderRepository;
-        this.customerRepository = customerRepository;
-        this.restaurantRepository = restaurantRepository;
-        this.orderDataMapper = orderDataMapper;
-        this.outboxService = outboxService;
-        this.orderCreatedPaymentRequestMessagePublisher = orderCreatedPaymentRequestMessagePublisher;
+  public OrderCreateHelper(OrderDomainService orderDomainService,
+                           OrderRepository orderRepository,
+                           CustomerRepository customerRepository,
+                           RestaurantRepository restaurantRepository,
+                           OrderDataMapper orderDataMapper,
+                           OutboxService outboxService,
+                           OrderCreatedPaymentRequestMessagePublisher orderCreatedPaymentRequestMessagePublisher) {
+    this.orderDomainService = orderDomainService;
+    this.orderRepository = orderRepository;
+    this.customerRepository = customerRepository;
+    this.restaurantRepository = restaurantRepository;
+    this.orderDataMapper = orderDataMapper;
+    this.outboxService = outboxService;
+    this.orderCreatedPaymentRequestMessagePublisher = orderCreatedPaymentRequestMessagePublisher;
+  }
+
+  @Transactional
+  public OrderCreatedEvent persistOrder(CreateOrderCommand createOrderCommand) {
+    checkCustomer(createOrderCommand.getCustomerId());
+    Restaurant restaurant = checkRestaurant(createOrderCommand);
+    Order order = orderDataMapper.createOrderCommandToOrder(createOrderCommand);
+
+    // Update order items with actual product prices from restaurant
+    updateOrderItemsWithProductPrices(order, restaurant);
+
+    OrderCreatedEvent orderCreatedEvent = orderDomainService.validateAndInitiateOrder(order, restaurant, orderCreatedPaymentRequestMessagePublisher);
+    saveOrder(order);
+
+    // Save event to outbox for reliable messaging
+    saveEventToOutbox(orderCreatedEvent);
+
+    log.info("Order is created with id: {}", orderCreatedEvent.getOrder().getId().getValue());
+    return orderCreatedEvent;
+  }
+
+  private Restaurant checkRestaurant(CreateOrderCommand createOrderCommand) {
+    Restaurant restaurant = orderDataMapper.createOrderCommandToRestaurant(createOrderCommand);
+    Optional<Restaurant> optionalRestaurant = restaurantRepository.findRestaurantInformation(restaurant);
+    if (optionalRestaurant.isEmpty()) {
+      log.warn("Could not find restaurant with restaurant id: {}", createOrderCommand.getRestaurantId());
+      throw new OrderDomainException("Could not find restaurant with restaurant id: " +
+        createOrderCommand.getRestaurantId());
     }
+    return optionalRestaurant.get();
+  }
 
-    @Transactional
-    public OrderCreatedEvent persistOrder(CreateOrderCommand createOrderCommand) {
-        checkCustomer(createOrderCommand.getCustomerId());
-        Restaurant restaurant = checkRestaurant(createOrderCommand);
-        Order order = orderDataMapper.createOrderCommandToOrder(createOrderCommand);
-        
-        // Update order items with actual product prices from restaurant
-        updateOrderItemsWithProductPrices(order, restaurant);
-        
-        OrderCreatedEvent orderCreatedEvent = orderDomainService.validateAndInitiateOrder(order, restaurant, orderCreatedPaymentRequestMessagePublisher);
-        saveOrder(order);
-        
-        // Save event to outbox for reliable messaging
-        saveEventToOutbox(orderCreatedEvent);
-        
-        log.info("Order is created with id: {}", orderCreatedEvent.getOrder().getId().getValue());
-        return orderCreatedEvent;
+  private void checkCustomer(UUID customerId) {
+    Optional<Customer> customer = customerRepository.findCustomer(customerId);
+    if (customer.isEmpty()) {
+      log.warn("Could not find customer with customer id: {}", customerId);
+      throw new OrderDomainException("Could not find customer with customer id: " + customer);
     }
+  }
 
-    private Restaurant checkRestaurant(CreateOrderCommand createOrderCommand) {
-        Restaurant restaurant = orderDataMapper.createOrderCommandToRestaurant(createOrderCommand);
-        Optional<Restaurant> optionalRestaurant = restaurantRepository.findRestaurantInformation(restaurant);
-        if (optionalRestaurant.isEmpty()) {
-            log.warn("Could not find restaurant with restaurant id: {}", createOrderCommand.getRestaurantId());
-            throw new OrderDomainException("Could not find restaurant with restaurant id: " +
-                    createOrderCommand.getRestaurantId());
-        }
-        return optionalRestaurant.get();
+  private Order saveOrder(Order order) {
+    Order orderResult = orderRepository.save(order);
+    if (orderResult == null) {
+      log.error("Could not save order!");
+      throw new OrderDomainException("Could not save order!");
     }
+    log.info("Order is saved with id: {}", orderResult.getId().getValue());
+    return orderResult;
+  }
 
-    private void checkCustomer(UUID customerId) {
-        Optional<Customer> customer = customerRepository.findCustomer(customerId);
-        if (customer.isEmpty()) {
-            log.warn("Could not find customer with customer id: {}", customerId);
-            throw new OrderDomainException("Could not find customer with customer id: " + customer);
-        }
-    }
+  private void updateOrderItemsWithProductPrices(Order order, Restaurant restaurant) {
+    System.out.println("DEBUG: === updateOrderItemsWithProductPrices called ===");
+    System.out.println("DEBUG: Restaurant has " + restaurant.getProducts().size() + " products");
+    restaurant.getProducts().forEach(product -> {
+      System.out.println("DEBUG: Restaurant product: " + product.getId().getValue() + " - " + product.getName() + " - " + product.getPrice().getAmount());
+    });
 
-    private Order saveOrder(Order order) {
-        Order orderResult = orderRepository.save(order);
-        if (orderResult == null) {
-            log.error("Could not save order!");
-            throw new OrderDomainException("Could not save order!");
-        }
-        log.info("Order is saved with id: {}", orderResult.getId().getValue());
-        return orderResult;
-    }
-    
-    private void updateOrderItemsWithProductPrices(Order order, Restaurant restaurant) {
-        System.out.println("DEBUG: === updateOrderItemsWithProductPrices called ===");
-        System.out.println("DEBUG: Restaurant has " + restaurant.getProducts().size() + " products");
-        restaurant.getProducts().forEach(product -> {
-            System.out.println("DEBUG: Restaurant product: " + product.getId().getValue() + " - " + product.getName() + " - " + product.getPrice().getAmount());
+    order.getItems().forEach(orderItem -> {
+      System.out.println("DEBUG: Processing order item with product ID: " + orderItem.getProduct().getId().getValue());
+      System.out.println("DEBUG: Order item price before update: " + orderItem.getPrice().getAmount());
+
+      restaurant.getProducts().stream()
+        .filter(product -> product.getId().equals(orderItem.getProduct().getId()))
+        .findFirst()
+        .ifPresent(product -> {
+          System.out.println("DEBUG: Found matching product: " + product.getName() + " with price: " + product.getPrice().getAmount());
+          // Update the product in the order item with the actual product from restaurant
+          orderItem.getProduct().updateWithConfirmedNameAndPrice(product.getName(), product.getPrice());
+          System.out.println("DEBUG: Updated order item product price to: " + orderItem.getProduct().getPrice().getAmount());
         });
-        
-        order.getItems().forEach(orderItem -> {
-            System.out.println("DEBUG: Processing order item with product ID: " + orderItem.getProduct().getId().getValue());
-            System.out.println("DEBUG: Order item price before update: " + orderItem.getPrice().getAmount());
-            
-            restaurant.getProducts().stream()
-                    .filter(product -> product.getId().equals(orderItem.getProduct().getId()))
-                    .findFirst()
-                    .ifPresent(product -> {
-                        System.out.println("DEBUG: Found matching product: " + product.getName() + " with price: " + product.getPrice().getAmount());
-                        // Update the product in the order item with the actual product from restaurant
-                        orderItem.getProduct().updateWithConfirmedNameAndPrice(product.getName(), product.getPrice());
-                        System.out.println("DEBUG: Updated order item product price to: " + orderItem.getProduct().getPrice().getAmount());
-                    });
-        });
-        System.out.println("DEBUG: === updateOrderItemsWithProductPrices completed ===");
+    });
+    System.out.println("DEBUG: === updateOrderItemsWithProductPrices completed ===");
+  }
+
+  private void saveEventToOutbox(OrderCreatedEvent orderCreatedEvent) {
+    log.info("=== DEBUG: saveEventToOutbox called ===");
+    try {
+      // Convert event to JSON for outbox storage
+      String eventData = String.format(
+        "{\"orderId\":\"%s\",\"customerId\":\"%s\",\"restaurantId\":\"%s\",\"price\":%s,\"orderStatus\":\"%s\"}",
+        orderCreatedEvent.getOrder().getId().getValue(),
+        orderCreatedEvent.getOrder().getCustomerId().getValue(),
+        orderCreatedEvent.getOrder().getRestaurantId().getValue(),
+        orderCreatedEvent.getOrder().getPrice().getAmount(),
+        orderCreatedEvent.getOrder().getOrderStatus().name()
+      );
+
+      log.info("=== DEBUG: Event data: {} ===", eventData);
+
+      outboxService.saveEvent(
+        orderCreatedEvent.getOrder().getTrackingId().getValue(),
+        "Order",
+        "OrderCreatedEvent",
+        eventData
+      );
+
+      log.info("OrderCreatedEvent saved to outbox for order: {}",
+        orderCreatedEvent.getOrder().getId().getValue());
+    } catch (Exception e) {
+      log.error("Failed to save event to outbox", e);
+      // Don't throw exception to avoid breaking the transaction
     }
-    
-    private void saveEventToOutbox(OrderCreatedEvent orderCreatedEvent) {
-        log.info("=== DEBUG: saveEventToOutbox called ===");
-        try {
-            // Convert event to JSON for outbox storage
-            String eventData = String.format(
-                "{\"orderId\":\"%s\",\"customerId\":\"%s\",\"restaurantId\":\"%s\",\"price\":%s,\"orderStatus\":\"%s\"}",
-                orderCreatedEvent.getOrder().getId().getValue(),
-                orderCreatedEvent.getOrder().getCustomerId().getValue(),
-                orderCreatedEvent.getOrder().getRestaurantId().getValue(),
-                orderCreatedEvent.getOrder().getPrice().getAmount(),
-                orderCreatedEvent.getOrder().getOrderStatus().name()
-            );
-            
-            log.info("=== DEBUG: Event data: {} ===", eventData);
-            
-            outboxService.saveEvent(
-                orderCreatedEvent.getOrder().getId().getValue(),
-                "Order",
-                "OrderCreatedEvent",
-                eventData
-            );
-            
-            log.info("OrderCreatedEvent saved to outbox for order: {}", 
-                orderCreatedEvent.getOrder().getId().getValue());
-        } catch (Exception e) {
-            log.error("Failed to save event to outbox", e);
-            // Don't throw exception to avoid breaking the transaction
-        }
-    }
+  }
 }

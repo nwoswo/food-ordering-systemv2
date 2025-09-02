@@ -1,9 +1,9 @@
 package com.food.ordering.system.payment.service.adapter.outbound.persistence;
 
 import com.food.ordering.system.common.domain.valueobject.CustomerId;
+import com.food.ordering.system.payment.domain.model.entities.CreditHistory;
 import com.food.ordering.system.payment.service.infrastructure.persistence.mappers.CreditHistoryDataAccessMapper;
 import com.food.ordering.system.payment.service.infrastructure.persistence.repositories.CreditHistoryJpaRepository;
-import com.food.ordering.system.payment.service.domain.model.entities.CreditHistory;
 import com.food.ordering.system.payment.service.application.ports.out.CreditHistoryRepository;
 import org.springframework.stereotype.Component;
 

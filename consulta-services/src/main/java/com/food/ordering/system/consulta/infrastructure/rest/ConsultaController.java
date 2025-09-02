@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 @RestController
-@RequestMapping("/api/v1/consulta")
+@RequestMapping("/consultas")
 @RequiredArgsConstructor
 @Slf4j
 public class ConsultaController {
@@ -60,7 +60,13 @@ public class ConsultaController {
     }
 
     @GetMapping("/health")
-    public ResponseEntity<String> health() {
-        return ResponseEntity.ok("Consulta Service is running!");
+    public ResponseEntity<Object> health() {
+        var healthResponse = new java.util.HashMap<String, Object>();
+        healthResponse.put("status", "UP");
+        healthResponse.put("service", "consulta-service");
+        healthResponse.put("timestamp", java.time.LocalDateTime.now());
+        healthResponse.put("version", "1.0.0");
+        
+        return ResponseEntity.ok(healthResponse);
     }
 }

@@ -4,17 +4,16 @@ server:
 spring:
   application:
     name: api-gateway
-  main:
-    web-application-type: reactive
   cloud:
     gateway:
       discovery:
         locator:
-          enabled: false
+          enabled: true
+          lower-case-service-id: true
       routes:
         # Order Service
         - id: order-service
-          uri: http://order-service:8181
+          uri: lb://order-service:8181
           predicates:
             - Path=/api/orders/**
           filters:
@@ -26,7 +25,7 @@ spring:
 
         # Payment Service
         - id: payment-service
-          uri: http://payment-service:8182
+          uri: lb://payment-service:8182
           predicates:
             - Path=/api/payments/**
           filters:
@@ -38,7 +37,7 @@ spring:
 
         # Restaurant Service
         - id: restaurant-service
-          uri: http://restaurant-service:8183
+          uri: lb://restaurant-service:8183
           predicates:
             - Path=/api/restaurants/**
           filters:
@@ -50,7 +49,7 @@ spring:
 
         # Customer Service
         - id: customer-service
-          uri: http://customer-service:8184
+          uri: lb://customer-service:8184
           predicates:
             - Path=/api/customers/**
           filters:
@@ -60,53 +59,34 @@ spring:
                 name: customer-service-circuit-breaker
                 fallbackUri: forward:/fallback/customer-service
 
-        # Consulta Service
-        - id: consulta-service
-          uri: http://consulta-service:8185
-          predicates:
-            - Path=/api/consultas/**
-          filters:
-            - StripPrefix=1
-            - name: CircuitBreaker
-              args:
-                name: consulta-service-circuit-breaker
-                fallbackUri: forward:/fallback/consulta-service
-
         # Health Check Routes
         - id: order-service-health
-          uri: http://order-service:8181
+          uri: lb://order-service:8181
           predicates:
             - Path=/api/health/orders
           filters:
             - RewritePath=/api/health/orders, /orders/health
 
         - id: payment-service-health
-          uri: http://payment-service:8182
+          uri: lb://payment-service:8182
           predicates:
             - Path=/api/health/payments
           filters:
             - RewritePath=/api/health/payments, /payments/health
 
         - id: restaurant-service-health
-          uri: http://restaurant-service:8183
+          uri: lb://restaurant-service:8183
           predicates:
             - Path=/api/health/restaurants
           filters:
             - RewritePath=/api/health/restaurants, /restaurants/health
 
         - id: customer-service-health
-          uri: http://customer-service:8184
+          uri: lb://customer-service:8184
           predicates:
             - Path=/api/health/customers
           filters:
             - RewritePath=/api/health/customers, /customers/health
-
-        - id: consulta-service-health
-          uri: http://consulta-service:8185
-          predicates:
-            - Path=/api/health/consulta
-          filters:
-            - RewritePath=/api/health/consulta, /consulta/health
 
 # Actuator configuration
 management:

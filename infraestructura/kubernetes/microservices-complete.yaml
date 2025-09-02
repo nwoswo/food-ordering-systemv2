@@ -63,7 +63,7 @@ metadata:
   name: customer-service
   namespace: kafka-infrastructure
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - port: 8184
     targetPort: 8184
@@ -94,6 +94,8 @@ spec:
         ports:
         - containerPort: 8182
         env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
         - name: POSTGRES_HOST
           value: "postgres"
         - name: POSTGRES_PORT
@@ -132,7 +134,7 @@ metadata:
   name: payment-service
   namespace: kafka-infrastructure
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - port: 8182
     targetPort: 8182
@@ -163,6 +165,8 @@ spec:
         ports:
         - containerPort: 8183
         env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
         - name: POSTGRES_HOST
           value: "postgres"
         - name: POSTGRES_PORT
@@ -207,7 +211,7 @@ metadata:
   name: restaurant-service
   namespace: kafka-infrastructure
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - port: 8183
     targetPort: 8183
@@ -238,6 +242,8 @@ spec:
         ports:
         - containerPort: 8181
         env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
         - name: POSTGRES_HOST
           value: "postgres"
         - name: POSTGRES_PORT
@@ -282,7 +288,7 @@ metadata:
   name: order-service
   namespace: kafka-infrastructure
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - port: 8181
     targetPort: 8181
@@ -313,6 +319,8 @@ spec:
         ports:
         - containerPort: 8185
         env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "kubernetes"
         - name: POSTGRES_HOST
           value: "postgres"
         - name: POSTGRES_PORT
@@ -351,7 +359,7 @@ metadata:
   name: consulta-service
   namespace: kafka-infrastructure
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   ports:
   - port: 8185
     targetPort: 8185
@@ -377,11 +385,13 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: api-gateway-service:latest
+        image: api-gateway:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 8080
         env:
+        - name: SPRING_PROFILES_ACTIVE
+          value: "k8s"
         - name: POSTGRES_HOST
           value: "postgres"
         - name: POSTGRES_PORT

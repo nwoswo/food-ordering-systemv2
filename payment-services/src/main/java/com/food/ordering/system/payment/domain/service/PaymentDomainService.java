@@ -1,8 +1,8 @@
 package com.food.ordering.system.payment.service.domain.service;
 
 import com.food.ordering.system.common.domain.event.publisher.DomainEventPublisher;
+import com.food.ordering.system.payment.domain.model.entities.CreditHistory;
 import com.food.ordering.system.payment.service.domain.model.entities.CreditEntry;
-import com.food.ordering.system.payment.service.domain.model.entities.CreditHistory;
 import com.food.ordering.system.payment.service.domain.model.entities.Payment;
 import com.food.ordering.system.payment.service.domain.model.events.PaymentCancelledEvent;
 import com.food.ordering.system.payment.service.domain.model.events.PaymentCompletedEvent;

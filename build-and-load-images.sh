@@ -20,14 +20,20 @@ print_success() {
     echo -e "${GREEN}[SUCCESS]${NC} $1"
 }
 
+
+# Get script directory for absolute paths
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_ROOT="$SCRIPT_DIR"
+
 # Function to build and load image
 build_and_load_image() {
     local service_name=$1
     local service_path=$2
-    
+    local abs_service_path="$SCRIPT_DIR/$service_path"
     print_status "Building $service_name..."
-    cd "$service_path"
-    docker build -t "$service_name:latest" .
+    cd "$abs_service_path"
+    "$PROJECT_ROOT/gradlew" :$service_name:docker
     kind load docker-image "$service_name:latest" --name kafka-infrastructure
     cd - > /dev/null
     print_success "$service_name built and loaded successfully!"

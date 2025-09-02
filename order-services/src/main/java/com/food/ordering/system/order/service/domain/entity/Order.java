@@ -1,5 +1,6 @@
 package com.food.ordering.system.order.service.domain.entity;
 
+
 import com.food.ordering.system.common.domain.entity.AggregateRoot;
 import com.food.ordering.system.common.domain.valueobject.*;
 import com.food.ordering.system.order.service.domain.exception.OrderDomainException;

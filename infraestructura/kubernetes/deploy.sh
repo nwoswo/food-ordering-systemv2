@@ -118,9 +118,42 @@ EOF
     log_success "MetalLB instalado y configurado"
 }
 
-# Función para construir y cargar imágenes de microservicios
+# # Función para construir y cargar imágenes de microservicios
+# build_and_load_images() {
+#     log_info "Construyendo y cargando imágenes de microservicios..."
+    
+#     local services=("customer-services" "payment-services" "restaurant-services" "order-services" "consulta-services" "api-gateway")
+    
+#     for service in "${services[@]}"; do
+#         log_info "Procesando $service..."
+        
+#         if [ -d "$PROJECT_ROOT/$service" ]; then
+#             cd "$PROJECT_ROOT/$service"
+            
+#             # Construir con Gradle usando el gradlew del proyecto raíz
+#             log_info "Construyendo $service con Gradle..."
+#             "$PROJECT_ROOT/gradlew" build -x test
+            
+#             # Construir imagen Docker
+#             local image_name="${service//-services/}-service"
+#             log_info "Construyendo imagen Docker: $image_name:latest"
+#             docker build -t "$image_name:latest" .
+            
+#             # Cargar imagen en Kind
+#             log_info "Cargando imagen en Kind cluster..."
+#             kind load docker-image "$image_name:latest" --name "$CLUSTER_NAME"
+            
+#             log_success "$service procesado exitosamente"
+#         else
+#             log_warning "Directorio $service no encontrado, saltando..."
+#         fi
+#     done
+    
+#     cd "$PROJECT_ROOT/infraestructura/kubernetes"
+# }
+
 build_and_load_images() {
-    log_info "Construyendo y cargando imágenes de microservicios..."
+    log_info "Construyendo y cargando imágenes de microservicios con Gradle (plugin Docker)..."
     
     local services=("customer-services" "payment-services" "restaurant-services" "order-services" "consulta-services" "api-gateway")
     
@@ -130,18 +163,16 @@ build_and_load_images() {
         if [ -d "$PROJECT_ROOT/$service" ]; then
             cd "$PROJECT_ROOT/$service"
             
-            # Construir con Gradle usando el gradlew del proyecto raíz
-            log_info "Construyendo $service con Gradle..."
-            "$PROJECT_ROOT/gradlew" build -x test
+            # Construir imagen Docker usando el plugin de Gradle
+            log_info "Construyendo imagen Docker con Gradle para $service..."
+            "$PROJECT_ROOT/gradlew" :$service:docker
             
-            # Construir imagen Docker
-            local image_name="${service//-services/}-service"
-            log_info "Construyendo imagen Docker: $image_name:latest"
-            docker build -t "$image_name:latest" .
+            # Obtener el nombre de la imagen desde el build.gradle (ajusta si el nombre es diferente)
+            local image_name="${service}:latest"
             
             # Cargar imagen en Kind
             log_info "Cargando imagen en Kind cluster..."
-            kind load docker-image "$image_name:latest" --name "$CLUSTER_NAME"
+            kind load docker-image "$image_name" --name "$CLUSTER_NAME"
             
             log_success "$service procesado exitosamente"
         else
@@ -231,9 +262,9 @@ deploy_microservices() {
     
     # Esperar a que todos los microservicios estén listos
     log_info "Esperando a que los microservicios estén listos..."
-    # kubectl wait --for=condition=ready pod -l app=order-service -n "$NAMESPACE" --timeout=300s
-    # kubectl wait --for=condition=ready pod -l app=payment-service -n "$NAMESPACE" --timeout=300s
-    # kubectl wait --for=condition=ready pod -l app=restaurant-service -n "$NAMESPACE" --timeout=300s
+    kubectl wait --for=condition=ready pod -l app=order-service -n "$NAMESPACE" --timeout=300s
+    kubectl wait --for=condition=ready pod -l app=payment-service -n "$NAMESPACE" --timeout=300s
+    kubectl wait --for=condition=ready pod -l app=restaurant-service -n "$NAMESPACE" --timeout=300s
     # kubectl wait --for=condition=ready pod -l app=customer-service -n "$NAMESPACE" --timeout=300s
     # kubectl wait --for=condition=ready pod -l app=consulta-service -n "$NAMESPACE" --timeout=300s
     # kubectl wait --for=condition=ready pod -l app=api-gateway -n "$NAMESPACE" --timeout=300s
@@ -289,5 +320,7 @@ main() {
     show_final_info
 }
 
-# Ejecutar función principal
-main "$@"
+# # Ejecutar función principal
+# main "$@"
+
+build_and_load_images() 

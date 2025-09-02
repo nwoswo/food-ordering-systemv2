@@ -2,8 +2,8 @@ package com.food.ordering.system.payment.service.infrastructure.persistence.mapp
 
 import com.food.ordering.system.common.domain.valueobject.CustomerId;
 import com.food.ordering.system.common.domain.valueobject.Money;
+import com.food.ordering.system.payment.domain.model.entities.CreditHistory;
 import com.food.ordering.system.payment.service.infrastructure.persistence.entities.CreditHistoryEntity;
-import com.food.ordering.system.payment.service.domain.model.entities.CreditHistory;
 import com.food.ordering.system.payment.service.domain.model.valueobjects.CreditHistoryId;
 import org.springframework.stereotype.Component;
 

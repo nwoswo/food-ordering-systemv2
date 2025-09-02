@@ -1,6 +1,7 @@
 package com.food.ordering.system.payment.service.domain.model.entities;
 
-import com.food.ordering.system.common.domain.entity.BaseEntity;
+
+import com.food.ordering.system.common.domain.BaseEntity;
 import com.food.ordering.system.common.domain.valueobject.CustomerId;
 import com.food.ordering.system.common.domain.valueobject.Money;
 import com.food.ordering.system.payment.service.domain.model.valueobjects.CreditEntryId;
