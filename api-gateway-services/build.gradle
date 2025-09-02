@@ -39,7 +39,7 @@ bootJar {
 }
 
 docker {
-    name "api-gateway:latest"
+    name "api-gateway-service:latest"
     dockerfile file('Dockerfile')
     files bootJar.archiveFile
     buildArgs([JAR_FILE: bootJar.archiveFileName.get()])

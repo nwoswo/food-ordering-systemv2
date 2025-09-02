@@ -119,41 +119,8 @@ EOF
 }
 
 # # Función para construir y cargar imágenes de microservicios
-# build_and_load_images() {
-#     log_info "Construyendo y cargando imágenes de microservicios..."
-    
-#     local services=("customer-services" "payment-services" "restaurant-services" "order-services" "consulta-services" "api-gateway")
-    
-#     for service in "${services[@]}"; do
-#         log_info "Procesando $service..."
-        
-#         if [ -d "$PROJECT_ROOT/$service" ]; then
-#             cd "$PROJECT_ROOT/$service"
-            
-#             # Construir con Gradle usando el gradlew del proyecto raíz
-#             log_info "Construyendo $service con Gradle..."
-#             "$PROJECT_ROOT/gradlew" build -x test
-            
-#             # Construir imagen Docker
-#             local image_name="${service//-services/}-service"
-#             log_info "Construyendo imagen Docker: $image_name:latest"
-#             docker build -t "$image_name:latest" .
-            
-#             # Cargar imagen en Kind
-#             log_info "Cargando imagen en Kind cluster..."
-#             kind load docker-image "$image_name:latest" --name "$CLUSTER_NAME"
-            
-#             log_success "$service procesado exitosamente"
-#         else
-#             log_warning "Directorio $service no encontrado, saltando..."
-#         fi
-#     done
-    
-#     cd "$PROJECT_ROOT/infraestructura/kubernetes"
-# }
-
 build_and_load_images() {
-    log_info "Construyendo y cargando imágenes de microservicios con Gradle (plugin Docker)..."
+    log_info "Construyendo y cargando imágenes de microservicios..."
     
     local services=("customer-services" "payment-services" "restaurant-services" "order-services" "consulta-services" "api-gateway")
     
@@ -163,16 +130,18 @@ build_and_load_images() {
         if [ -d "$PROJECT_ROOT/$service" ]; then
             cd "$PROJECT_ROOT/$service"
             
-            # Construir imagen Docker usando el plugin de Gradle
-            log_info "Construyendo imagen Docker con Gradle para $service..."
-            "$PROJECT_ROOT/gradlew" :$service:docker
+            # Construir con Gradle usando el gradlew del proyecto raíz
+            log_info "Construyendo $service con Gradle..."
+            "$PROJECT_ROOT/gradlew" build -x test
             
-            # Obtener el nombre de la imagen desde el build.gradle (ajusta si el nombre es diferente)
-            local image_name="${service}:latest"
+            # Construir imagen Docker
+            local image_name="${service//-services/}-service"
+            log_info "Construyendo imagen Docker: $image_name:latest"
+            docker build -t "$image_name:latest" .
             
             # Cargar imagen en Kind
             log_info "Cargando imagen en Kind cluster..."
-            kind load docker-image "$image_name" --name "$CLUSTER_NAME"
+            kind load docker-image "$image_name:latest" --name "$CLUSTER_NAME"
             
             log_success "$service procesado exitosamente"
         else
@@ -182,6 +151,37 @@ build_and_load_images() {
     
     cd "$PROJECT_ROOT/infraestructura/kubernetes"
 }
+
+# build_and_load_images() {
+#     log_info "Construyendo y cargando imágenes de microservicios con Gradle (plugin Docker)..."
+    
+#     local services=("customer-services" "payment-services" "restaurant-services" "order-services" "consulta-services" "api-gateway")
+    
+#     for service in "${services[@]}"; do
+#         log_info "Procesando $service..."
+        
+#         if [ -d "$PROJECT_ROOT/$service" ]; then
+#             cd "$PROJECT_ROOT/$service"
+            
+#             # Construir imagen Docker usando el plugin de Gradle
+#             log_info "Construyendo imagen Docker con Gradle para $service..."
+#             "$PROJECT_ROOT/gradlew" :$service:docker
+            
+#             # Obtener el nombre de la imagen desde el build.gradle (ajusta si el nombre es diferente)
+#             local image_name="${service}:latest"
+            
+#             # Cargar imagen en Kind
+#             log_info "Cargando imagen en Kind cluster..."
+#             kind load docker-image "$image_name" --name "$CLUSTER_NAME"
+            
+#             log_success "$service procesado exitosamente"
+#         else
+#             log_warning "Directorio $service no encontrado, saltando..."
+#         fi
+#     done
+    
+#     cd "$PROJECT_ROOT/infraestructura/kubernetes"
+# }
 
 # Función para desplegar infraestructura
 deploy_infrastructure() {
@@ -321,6 +321,4 @@ main() {
 }
 
 # # Ejecutar función principal
-# main "$@"
-
-build_and_load_images() 
+main "$@"

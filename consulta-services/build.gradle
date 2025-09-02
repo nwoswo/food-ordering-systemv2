@@ -46,6 +46,9 @@ dependencies {
 
     // 📊 Observabilidad y monitoreo
     implementation 'org.springframework.boot:spring-boot-starter-actuator' // Endpoints de salud, métricas, etc.
+
+    // 📖 Documentación de API con OpenAPI/Swagger
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0' // Genera UI de Swagger y spec OpenAPI
 }
 
 

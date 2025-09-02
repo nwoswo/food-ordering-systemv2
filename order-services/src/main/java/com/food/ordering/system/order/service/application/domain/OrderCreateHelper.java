@@ -1,9 +1,14 @@
 package com.food.ordering.system.order.service.application.domain;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.function.Function;
 import java.util.Optional;
 import java.util.UUID;
-
-import org.springframework.stereotype.Component;
+import java.util.stream.Collectors;
+import org.springframework.stereotype.Component; 
 import org.springframework.transaction.annotation.Transactional;
 
 import com.food.ordering.system.order.service.domain.dto.create.CreateOrderCommand;
@@ -11,16 +16,15 @@ import com.food.ordering.system.order.service.domain.entity.Customer;
 import com.food.ordering.system.order.service.domain.entity.Order;
 import com.food.ordering.system.order.service.domain.entity.Restaurant;
 import com.food.ordering.system.order.service.domain.event.OrderCreatedEvent;
+import com.food.ordering.system.order.service.domain.entity.Product;
 import com.food.ordering.system.order.service.domain.exception.OrderDomainException;
 import com.food.ordering.system.order.service.domain.mapper.OrderDataMapper;
-
 import com.food.ordering.system.order.service.domain.ports.output.repository.CustomerRepository;
 import com.food.ordering.system.order.service.domain.ports.output.repository.OrderRepository;
 import com.food.ordering.system.order.service.domain.ports.output.repository.RestaurantRepository;
 import com.food.ordering.system.order.service.domain.ports.output.message.publisher.payment.OrderCreatedPaymentRequestMessagePublisher;
 import com.food.ordering.system.order.service.infrastructure.order.adapter.OutboxService;
 import com.food.ordering.system.order.service.domain.OrderDomainService;
-
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -40,13 +44,16 @@ public class OrderCreateHelper {
   private final OutboxService outboxService;
   private final OrderCreatedPaymentRequestMessagePublisher orderCreatedPaymentRequestMessagePublisher;
 
+  private final ObjectMapper objectMapper;
+
   public OrderCreateHelper(OrderDomainService orderDomainService,
                            OrderRepository orderRepository,
                            CustomerRepository customerRepository,
                            RestaurantRepository restaurantRepository,
                            OrderDataMapper orderDataMapper,
                            OutboxService outboxService,
-                           OrderCreatedPaymentRequestMessagePublisher orderCreatedPaymentRequestMessagePublisher) {
+                           OrderCreatedPaymentRequestMessagePublisher orderCreatedPaymentRequestMessagePublisher,
+                           ObjectMapper objectMapper) {
     this.orderDomainService = orderDomainService;
     this.orderRepository = orderRepository;
     this.customerRepository = customerRepository;
@@ -54,6 +61,7 @@ public class OrderCreateHelper {
     this.orderDataMapper = orderDataMapper;
     this.outboxService = outboxService;
     this.orderCreatedPaymentRequestMessagePublisher = orderCreatedPaymentRequestMessagePublisher;
+    this.objectMapper = objectMapper;
   }
 
   @Transactional
@@ -105,53 +113,55 @@ public class OrderCreateHelper {
   }
 
   private void updateOrderItemsWithProductPrices(Order order, Restaurant restaurant) {
-    System.out.println("DEBUG: === updateOrderItemsWithProductPrices called ===");
-    System.out.println("DEBUG: Restaurant has " + restaurant.getProducts().size() + " products");
-    restaurant.getProducts().forEach(product -> {
-      System.out.println("DEBUG: Restaurant product: " + product.getId().getValue() + " - " + product.getName() + " - " + product.getPrice().getAmount());
-    });
+    // Create a map of products for efficient lookup (O(N) operation).
+    Map<UUID, Product> restaurantProductMap = restaurant.getProducts().stream()
+        .collect(Collectors.toMap(product -> product.getId().getValue(), Function.identity()));
 
+    // Iterate through order items and update prices (O(M) operation).
     order.getItems().forEach(orderItem -> {
-      System.out.println("DEBUG: Processing order item with product ID: " + orderItem.getProduct().getId().getValue());
-      System.out.println("DEBUG: Order item price before update: " + orderItem.getPrice().getAmount());
+      UUID productId = orderItem.getProduct().getId().getValue();
+      Product restaurantProduct = restaurantProductMap.get(productId);
 
-      restaurant.getProducts().stream()
-        .filter(product -> product.getId().equals(orderItem.getProduct().getId()))
-        .findFirst()
-        .ifPresent(product -> {
-          System.out.println("DEBUG: Found matching product: " + product.getName() + " with price: " + product.getPrice().getAmount());
-          // Update the product in the order item with the actual product from restaurant
-          orderItem.getProduct().updateWithConfirmedNameAndPrice(product.getName(), product.getPrice());
-          System.out.println("DEBUG: Updated order item product price to: " + orderItem.getProduct().getPrice().getAmount());
-        });
+      if (restaurantProduct != null) {
+        orderItem.getProduct().updateWithConfirmedNameAndPrice(
+            restaurantProduct.getName(),
+            restaurantProduct.getPrice()
+        );
+      } else {
+        // This case should ideally not happen if validation is correct upstream.
+        // Logging it as a warning is important for debugging data integrity issues.
+        log.warn("Product with id: {} not found in restaurant: {}. Price not updated for this item.",
+            productId, restaurant.getId().getValue());
+      }
     });
-    System.out.println("DEBUG: === updateOrderItemsWithProductPrices completed ===");
   }
 
   private void saveEventToOutbox(OrderCreatedEvent orderCreatedEvent) {
-    log.info("=== DEBUG: saveEventToOutbox called ===");
     try {
-      // Convert event to JSON for outbox storage
-      String eventData = String.format(
-        "{\"orderId\":\"%s\",\"customerId\":\"%s\",\"restaurantId\":\"%s\",\"price\":%s,\"orderStatus\":\"%s\"}",
-        orderCreatedEvent.getOrder().getId().getValue(),
-        orderCreatedEvent.getOrder().getCustomerId().getValue(),
-        orderCreatedEvent.getOrder().getRestaurantId().getValue(),
-        orderCreatedEvent.getOrder().getPrice().getAmount(),
-        orderCreatedEvent.getOrder().getOrderStatus().name()
-      );
+      Order order = orderCreatedEvent.getOrder();
 
-      log.info("=== DEBUG: Event data: {} ===", eventData);
+      // Using a Map to build the payload is more readable and robust than manual string formatting.
+      // It relies on a proper JSON library (like Jackson) to handle serialization correctly.
+      Map<String, Object> payload = new LinkedHashMap<>();
+      payload.put("orderId", order.getId().getValue());
+      payload.put("customerId", order.getCustomerId().getValue());
+      payload.put("restaurantId", order.getRestaurantId().getValue());
+      payload.put("price", order.getPrice().getAmount());
+      payload.put("orderStatus", order.getOrderStatus().name());
+      payload.put("trackingid", order.getTrackingId().getValue());
+
+      String eventData = objectMapper.writeValueAsString(payload);
 
       outboxService.saveEvent(
-        orderCreatedEvent.getOrder().getTrackingId().getValue(),
+        order.getTrackingId().getValue(),
         "Order",
         "OrderCreatedEvent",
         eventData
       );
 
-      log.info("OrderCreatedEvent saved to outbox for order: {}",
-        orderCreatedEvent.getOrder().getId().getValue());
+      log.info("OrderCreatedEvent saved to outbox for order: {}", order.getId().getValue());
+    } catch (JsonProcessingException e) {
+      log.error("Failed to serialize OrderCreatedEvent payload for outbox", e);
     } catch (Exception e) {
       log.error("Failed to save event to outbox", e);
       // Don't throw exception to avoid breaking the transaction

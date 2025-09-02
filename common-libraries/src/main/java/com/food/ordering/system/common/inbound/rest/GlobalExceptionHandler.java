@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.bind.annotation.ResponseStatus;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -16,45 +17,56 @@ import java.util.stream.Collectors;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ResponseBody
-    @ExceptionHandler(value = {Exception.class})
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public ErrorDTO handleException(Exception exception) {
-        log.error(exception.getMessage(), exception);
-        return ErrorDTO.builder()
-                .code(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
-                .message("Unexpected error!")
-                .build();
-    }
+	@ResponseBody
+	@ExceptionHandler(value = { NoResourceFoundException.class })
+	@ResponseStatus(HttpStatus.NOT_FOUND)
+	public ErrorDTO handleNoResourceFoundException(NoResourceFoundException exception) {
+		log.warn("Recurso no encontrado: {}", exception.getMessage());
+		return ErrorDTO.builder()
+				.code(HttpStatus.NOT_FOUND.getReasonPhrase())
+				.message(exception.getMessage())
+				.build();
+	}
 
-    @ResponseBody
-    @ExceptionHandler(value = {ValidationException.class})
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public ErrorDTO handleException(ValidationException validationException) {
-       ErrorDTO errorDTO;
-       if (validationException instanceof ConstraintViolationException) {
-           String violations = extractViolationsFromException((ConstraintViolationException) validationException);
-           log.error(violations, validationException);
-           errorDTO = ErrorDTO.builder()
-                   .code(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                   .message(violations)
-                   .build();
-       } else {
-           String exceptionMessage = validationException.getMessage();
-           log.error(exceptionMessage, validationException);
-           errorDTO = ErrorDTO.builder()
-                   .code(HttpStatus.BAD_REQUEST.getReasonPhrase())
-                   .message(exceptionMessage)
-                   .build();
-       }
-       return errorDTO;
-    }
+	@ResponseBody
+	@ExceptionHandler(value = { Exception.class })
+	@ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+	public ErrorDTO handleException(Exception exception) {
+		log.error(exception.getMessage(), exception);
+		return ErrorDTO.builder()
+				.code(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
+				.message("Unexpected error!")
+				.build();
+	}
 
-    private String extractViolationsFromException(ConstraintViolationException validationException) {
-        return validationException.getConstraintViolations()
-                .stream()
-                .map(ConstraintViolation::getMessage)
-                .collect(Collectors.joining("--"));
-    }
+	@ResponseBody
+	@ExceptionHandler(value = { ValidationException.class })
+	@ResponseStatus(HttpStatus.BAD_REQUEST)
+	public ErrorDTO handleException(ValidationException validationException) {
+		ErrorDTO errorDTO;
+		if (validationException instanceof ConstraintViolationException) {
+			String violations = extractViolationsFromException((ConstraintViolationException) validationException);
+			log.error(violations, validationException);
+			errorDTO = ErrorDTO.builder()
+					.code(HttpStatus.BAD_REQUEST.getReasonPhrase())
+					.message(violations)
+					.build();
+		} else {
+			String exceptionMessage = validationException.getMessage();
+			log.error(exceptionMessage, validationException);
+			errorDTO = ErrorDTO.builder()
+					.code(HttpStatus.BAD_REQUEST.getReasonPhrase())
+					.message(exceptionMessage)
+					.build();
+		}
+		return errorDTO;
+	}
+
+	private String extractViolationsFromException(ConstraintViolationException validationException) {
+		return validationException.getConstraintViolations()
+				.stream()
+				.map(ConstraintViolation::getMessage)
+				.collect(Collectors.joining("--"));
+	}
 
 }

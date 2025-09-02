@@ -27,7 +27,7 @@ if [ $? -eq 0 ]; then
     
     # Build api-gateway
     echo "🐳 Generando imagen api-gateway..."
-    docker build -t api-gateway:latest api-gateway/ --build-arg JAR_FILE=api-gateway-1.0.0.jar
+    docker build -t api-gateway-service:latest api-gateway-services/ --build-arg JAR_FILE=api-gateway-service-1.0.0.jar
     
     # Build consulta-service
     echo "🐳 Generando imagen consulta-service..."

@@ -42,3 +42,9 @@ management:
   endpoint:
     health:
       show-details: always
+
+springdoc:
+  swagger-ui:
+    path: /consultas/swagger-ui.html
+  api-docs:
+    path: /consultas/api-docs

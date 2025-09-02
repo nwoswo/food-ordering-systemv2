@@ -385,7 +385,7 @@ spec:
     spec:
       containers:
       - name: api-gateway
-        image: api-gateway:latest
+        image: api-gateway-service:latest
         imagePullPolicy: Never
         ports:
         - containerPort: 8080

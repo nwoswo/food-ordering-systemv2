@@ -45,7 +45,7 @@ build_and_load_image "payment-service" "payment-services"
 build_and_load_image "restaurant-service" "restaurant-services"
 build_and_load_image "order-service" "order-services"
 build_and_load_image "consulta-service" "consulta-services"
-build_and_load_image "api-gateway" "api-gateway"
+build_and_load_image "api-gateway-service" "api-gateway-services"
 
 print_success "🎉 All images built and loaded successfully!"
 echo ""

@@ -60,6 +60,14 @@ spring:
                 name: customer-service-circuit-breaker
                 fallbackUri: forward:/fallback/customer-service
 
+        # Consulta Service Swagger UI
+        - id: consulta-service-swagger-ui
+          uri: http://consulta-service:8185
+          predicates:
+            - Path=/api/consultas/swagger-ui/**
+          filters:
+            - RewritePath=/api/consultas/swagger-ui/(?<segment>.*), /swagger-ui/$\{segment}
+
         # Consulta Service
         - id: consulta-service
           uri: http://consulta-service:8185
@@ -71,6 +79,14 @@ spring:
               args:
                 name: consulta-service-circuit-breaker
                 fallbackUri: forward:/fallback/consulta-service
+
+        # Consulta Service Swagger
+        - id: consulta-service-swagger
+          uri: http://consulta-service:8185
+          predicates:
+            - Path=/swagger/consultas/**
+          filters:
+            - RewritePath=/swagger/consultas/(?<segment>.*), /swagger-ui/$\{segment}
 
         # Health Check Routes
         - id: order-service-health

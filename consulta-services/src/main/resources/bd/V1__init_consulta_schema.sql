@@ -16,6 +16,7 @@ CREATE TABLE consulta.order_outbox
     restaurant_id uuid,
     price numeric(10,2),
     order_status character varying(50),
+    tracking_id uuid NOT NULL,
     failure_messages text,
     CONSTRAINT order_outbox_pkey PRIMARY KEY (id)
 );
@@ -35,3 +36,7 @@ CREATE INDEX "IDX_ORDER_OUTBOX_PROCESSED" ON consulta.order_outbox USING btree
 
 CREATE INDEX "IDX_ORDER_OUTBOX_CREATED_AT" ON consulta.order_outbox USING btree
     (created_at ASC NULLS LAST);
+
+CREATE INDEX "IDX_ORDER_OUTBOX_TRACKING_ID" ON consulta.order_outbox USING btree
+    (tracking_id ASC NULLS LAST);
+
