@@ -48,7 +48,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator' // Endpoints de salud, métricas, etc.
 
     // 📖 Documentación de API con OpenAPI/Swagger
-    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0' // Genera UI de Swagger y spec OpenAPI
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+    
+    // 🧠 MapStruct para mapeo entre DTOs y entidades
+    implementation 'org.mapstruct:mapstruct:1.5.5.Final' // API de MapStruct
+    annotationProcessor 'org.mapstruct:mapstruct-processor:1.5.5.Final' // Procesador de anotaciones para generar mapeos
+     // Genera UI de Swagger y spec OpenAPI
 }
 
 

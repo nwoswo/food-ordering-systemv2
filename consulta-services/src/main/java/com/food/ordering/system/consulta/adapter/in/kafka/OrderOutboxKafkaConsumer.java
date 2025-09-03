@@ -27,35 +27,26 @@ public class OrderOutboxKafkaConsumer {
   )
   public void consumeOrderOutboxEvent(String message) {
     try {
-      log.info("Received message from OrderCreatedEvent topic: {}", message);
-
       // The message might be double-encoded JSON string, so we need to parse it twice
       String actualMessage = message;
       if (message.startsWith("\"") && message.endsWith("\"")) {
         // Remove outer quotes and unescape
         actualMessage = message.substring(1, message.length() - 1)
-          .replace("\\\"", "\"")
-          .replace("\\\\", "\\");
+          .replace("\\\"", "\"").replace("\\\\", "\\");
       }
 
       JsonNode jsonNode = objectMapper.readTree(actualMessage);
 
-      // The message structure is the direct event data:
-      // {
-      //   "price": 200.00,
-      //   "orderId": "uuid",
-      //   "customerId": "uuid",
-      //   "orderStatus": "PENDING",
-      //   "restaurantId": "uuid"
-      // }
+      // Formatear el JSON para un registro más limpio
+      String prettyJson = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(jsonNode);
+      log.info("Received and processed message from OrderCreatedEvent topic:\n{}", prettyJson);
 
-      // Create OrderOutboxEntity from the message
       OrderOutboxEntity orderOutboxEntity = OrderOutboxEntity.builder()
         .id(UUID.randomUUID()) // Generate new ID for our service
         .aggregateId(UUID.fromString(jsonNode.get("orderId").asText()))
         .aggregateType("Order")
         .eventType("OrderCreatedEvent")
-        .eventData(actualMessage)
+        .eventData(prettyJson)
         .createdAt(LocalDateTime.now())
         .processed(false)
         .orderId(UUID.fromString(jsonNode.get("orderId").asText()))

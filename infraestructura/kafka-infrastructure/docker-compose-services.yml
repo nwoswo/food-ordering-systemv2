@@ -91,7 +91,7 @@ services:
     #   - order-service
 
   api-gateway:
-    image: api-gateway:latest
+    image: api-gateway-service:latest
     container_name: api-gateway
     ports:
       - "${API_GATEWAY_PORT:-8080}:8080"

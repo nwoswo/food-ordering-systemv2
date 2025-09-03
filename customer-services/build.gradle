@@ -47,4 +47,5 @@ docker {
     dockerfile file('Dockerfile')
     files bootJar.archiveFile
     buildArgs([JAR_FILE: bootJar.archiveFileName.get()])
+    copySpec.into('build/libs')
 }

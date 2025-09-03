@@ -34,7 +34,7 @@ dependencies {
 }
 
 bootJar {
-    archiveBaseName = 'api-gateway'
+    archiveBaseName = 'api-gateway-service'
     archiveVersion = '1.0.0'
 }
 
@@ -43,4 +43,5 @@ docker {
     dockerfile file('Dockerfile')
     files bootJar.archiveFile
     buildArgs([JAR_FILE: bootJar.archiveFileName.get()])
+    copySpec.into('build/libs')
 }
