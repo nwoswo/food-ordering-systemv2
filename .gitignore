@@ -178,4 +178,10 @@ gradle-app.setting
 # Java heap dump
 *.hprof
 
+# Build output directories (explicit rules)
+**/bin/
+**/target/
+**/out/
+**/build/
+
 # End of https://www.toptal.com/developers/gitignore/api/java,gradle,maven,intellij+all,visualstudiocode
